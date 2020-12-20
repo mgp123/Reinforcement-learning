@@ -1,31 +1,10 @@
 import math
 import numpy as np
 
+from epsilon_greedy import EpsilonGreedyQPolicy
+from learner import *
 from agent import Agent
-from learner import Learner
 from policy import Policy
-
-
-class EpsilonGreedyQPolicy(Policy):
-    def __init__(self, q_model, epsilon):
-        """
-        :param q_model: Q aproximator function. Typically a neural network.
-                Should support the () operation. This is though with pytorch in mind
-                Policy will behave epsilon greedy with respect to this
-        """
-        super(EpsilonGreedyQPolicy, self).__init__()
-        self.q_model = q_model
-        self.epsilon = epsilon
-
-    def __call__(self, state):
-        # TODO
-        # EPSILON GREEDY ALGORITHM
-        raise NotImplementedError
-
-    def predict_q_values(self, states):
-        # TODO
-        # SHOULD BE ABLE TO TAKE EITHER A LIST OR A NUMPY ARRAY
-        raise NotImplementedError
 
 
 class QIteration(Learner):
@@ -100,4 +79,3 @@ class QIteration(Learner):
             )
 
         return self.agent.policy
-

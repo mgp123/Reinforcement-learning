@@ -1,13 +1,7 @@
 import random
-from typing import List, Tuple, Any, TypeVar
 
 from policy import Policy
-
-StateType = TypeVar('StateType')
-ActionType = TypeVar('ActionType')
-
-TransitionType = Tuple[StateType, ActionType, float]
-TrajectoryType = List[TransitionType]
+from type_definitions import *
 
 
 class Learner(object):
@@ -15,7 +9,7 @@ class Learner(object):
         self.environment = environment
         self.sampled_trajectories = []
 
-    def add_transition(self,state=None, action=None, reward=None):
+    def add_transition(self, state=None, action=None, reward=None):
         current_trajectory_index = len(self.sampled_trajectories) - 1
         self.sampled_trajectories[current_trajectory_index] += [(state, action, reward)]
 
@@ -37,7 +31,7 @@ class Learner(object):
     def clear_trajectories(self):
         self.sampled_trajectories = []
 
-    def get_reward_to_go(self, trajectory : TrajectoryType, discount_factor: float) -> List[float]:
+    def get_reward_to_go(self, trajectory: TrajectoryType, discount_factor: float) -> List[float]:
         """
         :param discount_factor:
         :param trajectory: ordered list of transitions (state, action, reward)
@@ -62,7 +56,7 @@ class Learner(object):
         In case of terminal state, it gives none to state_next
         """
         n = self.amount_of_stored_transitions()
-        ind_sample = [random.randint(0, n) for i in range(n_samples)]
+        ind_sample = [random.randint(0, n) for _ in range(n_samples)]
         res = []
         state_index = 0
 
@@ -91,6 +85,3 @@ class Learner(object):
 
     def learn_policy(self, *args, **kwargs) -> Policy:
         raise NotImplementedError
-
-
-
