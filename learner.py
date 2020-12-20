@@ -9,12 +9,12 @@ class Learner(object):
         self.environment = environment
         self.sampled_trajectories = []
 
-    def add_transition(self, state=None, action=None, reward=None):
-        current_trajectory_index = len(self.sampled_trajectories) - 1
-        self.sampled_trajectories[current_trajectory_index] += [(state, action, reward)]
-
     def begin_trajectory(self, **kwargs):
         self.sampled_trajectories.append([])
+
+    def add_transition(self, state=None, action=None, reward=None, **kwargs):
+        current_trajectory_index = len(self.sampled_trajectories) - 1
+        self.sampled_trajectories[current_trajectory_index] += [(state, action, reward)]
 
     def sample_trajectories(self, agent, episodes):
         """
@@ -32,7 +32,8 @@ class Learner(object):
     def clear_trajectories(self):
         self.sampled_trajectories = []
 
-    def get_reward_to_go(self, trajectory: TrajectoryType, discount_factor: float) -> List[float]:
+    @staticmethod
+    def get_reward_to_go(trajectory: TrajectoryType, discount_factor: float) -> List[float]:
         """
         :param discount_factor:
         :param trajectory: ordered list of transitions (state, action, reward)
@@ -61,8 +62,8 @@ class Learner(object):
         ind_sample = [random.randint(0, n) for _ in range(n_samples)]
         res = []
         state_index = 0
-        
-        # TODO make implementation faster by ordering ind_sample and going through sampled_trajectories just once
+
+        # TODO make implementation faster by ordering ind_sample and going through sampled_trajectories once
         for i in ind_sample:
             for trajectory in self.sampled_trajectories:
                 if i >= len(trajectory):
@@ -72,7 +73,7 @@ class Learner(object):
                     if i < len(trajectory) - 1:
                         state_next = trajectory[i+1][state_index]
 
-                    transition = trajectory[i+1] + (state_next,)
+                    transition = trajectory[i] + (state_next,)
                     res.append(transition)
                     break
         return res

@@ -1,6 +1,6 @@
 from random import random, randint
 
-import numpy as np
+import torch
 
 from policy import Policy
 from type_definitions import StateType, FunctionApproximatorType
@@ -12,18 +12,18 @@ class GreedyQPolicy(Policy):
         Policy that chooses action maximizing  the q function
 
         :param q_model: Q aproximator function. Typically a neural network.
-                Should support the () operation with numpy arrays. This is though with pytorch in mind.
+                Should support the () operation with torch arrays. This is though with pytorch in mind.
                 Policy will behave epsilon greedy with respect to this q_model
         """
         self.q_model = q_model
 
     def __call__(self, state: StateType):
-        # to numpy
-        x = np.asarray([state])
+        # to torch
+        x = torch.tensor([state])
         q = self.q_model(x)
 
         # max Q action
-        action = np.argmax(q, axis=0)
+        action = torch.argmax(q, dim=0)[0]
         return action
 
 
@@ -42,27 +42,27 @@ class EpsilonGreedyQPolicy(Policy):
         self.epsilon = epsilon
 
     def __call__(self, state: StateType):
-        # to numpy
-        x = np.asarray([state])
-        q = self.q_model(x)
+        # to torch
+        x = torch.tensor([state], dtype=torch.float32)
+        q = self.q_model(x)[0]
 
-        action = np.argmax(q, axis=0)
+        action = torch.argmax(q, dim=0).item()
 
         if random() < self.epsilon:
-            a_size = q.shape[1]
+            a_size = q.shape[0]
             action = randint(0, a_size-1)
 
         return action
 
 
 class DecayingEpsilonGreedyQPolicy(EpsilonGreedyQPolicy):
-    def __init__(self, initial_epsilon: float, q_model: FunctionApproximatorType, decay_factor: float):
+    def __init__(self, q_model: FunctionApproximatorType, initial_epsilon: float, decay_factor: float):
         """
         Policy that chooses action maximizing the q function with epsilon chance of random action.
         Epsilon decays after each episode
 
         :param q_model: Q aproximator function. Typically a neural network.
-                SShould support the () operation with numpy arrays. This is though with pytorch in mind
+                SShould support the () operation with torch arrays. This is though with pytorch in mind
                 Policy will behave epsilon greedy with respect to this
         :param initial_epsilon: initial probability of taking random action
         :param decay_factor: multiplier to epsilon after end of each episode. Should be between 0 and 1

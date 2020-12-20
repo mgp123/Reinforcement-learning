@@ -53,7 +53,7 @@ class QIteration(Learner):
     def experience_replay(self, **kwargs):
         n_samples = self.hyperparameters["experience_replay_samples"]
 
-        if n_samples < self.amount_of_stored_transitions():
+        if self.amount_of_stored_transitions() < n_samples:
             return
 
         transitions = self.sample_transitions_from_stored_trajectories(n_samples)
@@ -85,6 +85,8 @@ class QIteration(Learner):
 
     def learn_policy(self) -> Policy:
         episodes = self.hyperparameters["episodes_to_train"]
+
+        # TODO Fix q_model so as not to accumulate gradient during act, only on experience replay
 
         for episode in range(episodes):
             self.agent.perform_episode(
