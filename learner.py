@@ -61,7 +61,8 @@ class Learner(object):
         ind_sample = [random.randint(0, n) for _ in range(n_samples)]
         res = []
         state_index = 0
-
+        
+        # TODO make implementation faster by ordering ind_sample and going through sampled_trajectories just once
         for i in ind_sample:
             for trajectory in self.sampled_trajectories:
                 if i >= len(trajectory):

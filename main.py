@@ -1,4 +1,3 @@
-from pytorch_decorators import pytorch_use_numpy_as_input
 import gym
 import torch
 import torch.nn as nn
@@ -8,7 +7,6 @@ def print_hi(name):
     print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
 
 
-@pytorch_use_numpy_as_input
 class CartPoleQNet(nn.Module):
     def __init__(self):
         super(CartPoleQNet, self).__init__()

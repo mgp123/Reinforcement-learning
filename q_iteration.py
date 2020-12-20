@@ -1,5 +1,5 @@
 import math
-import numpy as np
+import torch
 
 from epsilon_greedy import DecayingEpsilonGreedyQPolicy, GreedyQPolicy
 from learner import *
@@ -17,7 +17,7 @@ class QIteration(Learner):
             This is the MDP that we wish to use reinforcement learning on.
             Should support step.
         :param q_model : Function approximation to use. Typically a neural network.
-            Should support the () operation with numpy arrays and the fit operation. This is though with pytorch in mind.
+            Should support the () operation with torch arrays and the fit operation. This is though with pytorch in mind.
         :param exploration_policy : Policy to be used by agent to collect data for q iteration.
             Default is Decaying Epsilon Greedy using q_model with hyperparameters tuned
         """
@@ -58,7 +58,8 @@ class QIteration(Learner):
 
         transitions = self.sample_transitions_from_stored_trajectories(n_samples)
         # TODO fix state next == None cases
-        transitions = np.asarray(transitions)
+
+        transitions = torch.tensor(transitions)
 
         state, action = transitions[:, 0], transitions[:, 1]
         reward, state_next = transitions[:, 2], transitions[:, 3]
@@ -73,12 +74,12 @@ class QIteration(Learner):
         #   Q' <- E [ r +  max_a  [Q(s_t+1, a_t+1)] ]   (sampling to approximate expectation)
         # where Q is our previous q_model
 
-        # by using a function aproximator, there is, in theory no guaranteed convergence
+        # by using a function approximator, there is, in theory no guaranteed convergence
         # Empirically however, it works
 
-        q_max = np.amax(q_model(state_next), axis=1)
+        q_max = torch.max(q_model(state_next), dim=1)
         target = q_model(state)
-        target[np.arange(n_samples), action] = reward + self.discount_factor*q_max
+        target[torch.arange(n_samples), action] = reward + self.discount_factor*q_max
 
         q_model.fit(state, target)
 
