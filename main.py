@@ -1,4 +1,5 @@
 from q_iteration import QIteration
+import gym
 
 
 def print_hi(name):
@@ -8,6 +9,7 @@ def print_hi(name):
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    print_hi('PyCharm')
+    environment = gym.make("CartPole-v1")
+
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/

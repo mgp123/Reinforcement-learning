@@ -10,10 +10,10 @@ from policy import Policy
 class QIteration(Learner):
     def __init__(self, environment, q_model, exploration_policy=None):
         """
-            :param environment : should support step.
+            :param environment : should support step
                 This is the MDP that we wish to use reinforcement learning on
             :param q_model : Function approximation to use. Typically a neural network.
-                Should support the () operation. This is though with pytorch in mind
+                Should support the () operation. This is though with pytorch in mind.
             :param exploration_policy : policy to be used by agent to collect data for q iteration.
                 Default is Decaying Epsilon Greedy using q_model with hyperparameters tuned
         """
@@ -53,6 +53,7 @@ class QIteration(Learner):
             return
 
         transitions = self.sample_transitions_from_stored_trajectories(n_samples)
+        # TODO fix state next == None cases
         transitions = np.asarray(transitions)
 
         state, action = transitions[:, 0], transitions[:, 1]
