@@ -19,6 +19,7 @@ class Learner(object):
     def sample_trajectories(self, agent, episodes):
         """
         Runs complete episodes with agent and adds the trajectories to sampled_trajectories
+
         :param agent: the agent that should perform the episodes
         :param episodes: number of trajectories to store
         """
@@ -51,9 +52,10 @@ class Learner(object):
     def sample_transitions_from_stored_trajectories(self, n_samples) \
             -> List[Tuple[StateType, ActionType, float, StateType]]:
         """
+        Samples transitions from stored trajectories. In case of terminal state, it gives none to state_next
+
         :param n_samples: number of samples to take
-        :return: a list of (state, action, reward, state_next)
-        In case of terminal state, it gives none to state_next
+        :return: a list of (state, action, reward, state_next).
         """
         n = self.amount_of_stored_transitions()
         ind_sample = [random.randint(0, n) for _ in range(n_samples)]
@@ -76,7 +78,7 @@ class Learner(object):
 
     def amount_of_stored_transitions(self) -> int:
         """
-        sums all the transitions in all the already sampled trajectories
+        Sums all the transitions in all the already sampled trajectories
         """
         res = 0
         for t in self.sampled_trajectories:

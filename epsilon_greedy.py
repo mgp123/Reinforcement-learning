@@ -3,15 +3,17 @@ from random import random, randint
 import numpy as np
 
 from policy import Policy
-from type_definitions import StateType
+from type_definitions import StateType, FunctionApproximatorType
 
 
 class GreedyQPolicy(Policy):
-    def __init__(self, q_model):
+    def __init__(self, q_model: FunctionApproximatorType):
         """
+        Policy that chooses action maximizing  the q function
+
         :param q_model: Q aproximator function. Typically a neural network.
-                Should support the () operation. This is though with pytorch in mind
-                Policy will behave epsilon greedy with respect to this
+                Should support the () operation with numpy arrays. This is though with pytorch in mind.
+                Policy will behave epsilon greedy with respect to this q_model
         """
         self.q_model = q_model
 
@@ -26,8 +28,10 @@ class GreedyQPolicy(Policy):
 
 
 class EpsilonGreedyQPolicy(Policy):
-    def __init__(self, q_model, epsilon: float):
+    def __init__(self, q_model: FunctionApproximatorType, epsilon: float):
         """
+        Policy that chooses action maximizing the q function with epsilon chance of random action
+
         :param q_model: Q aproximator function. Typically a neural network.
                 Should support the () operation. This is though with pytorch in mind
                 Policy will behave epsilon greedy with respect to this
@@ -52,10 +56,13 @@ class EpsilonGreedyQPolicy(Policy):
 
 
 class DecayingEpsilonGreedyQPolicy(EpsilonGreedyQPolicy):
-    def __init__(self, initial_epsilon: float, q_model, decay_factor: float):
+    def __init__(self, initial_epsilon: float, q_model: FunctionApproximatorType, decay_factor: float):
         """
+        Policy that chooses action maximizing the q function with epsilon chance of random action.
+        Epsilon decays after each episode
+
         :param q_model: Q aproximator function. Typically a neural network.
-                Should support the () operation. This is though with pytorch in mind
+                SShould support the () operation with numpy arrays. This is though with pytorch in mind
                 Policy will behave epsilon greedy with respect to this
         :param initial_epsilon: initial probability of taking random action
         :param decay_factor: multiplier to epsilon after end of each episode. Should be between 0 and 1

@@ -5,3 +5,5 @@ ActionType = TypeVar('ActionType')
 
 TransitionType = Tuple[StateType, ActionType, float]
 TrajectoryType = List[TransitionType]
+
+FunctionApproximatorType = TypeVar('FunctionApproximatorType')

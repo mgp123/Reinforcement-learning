@@ -8,14 +8,18 @@ from policy import Policy
 
 
 class QIteration(Learner):
-    def __init__(self, environment, q_model, exploration_policy=None):
+    def __init__(self, environment, q_model: FunctionApproximatorType, exploration_policy: Policy = None):
         """
-            :param environment : should support step
-                This is the MDP that we wish to use reinforcement learning on
-            :param q_model : Function approximation to use. Typically a neural network.
-                Should support the () operation. This is though with pytorch in mind.
-            :param exploration_policy : policy to be used by agent to collect data for q iteration.
-                Default is Decaying Epsilon Greedy using q_model with hyperparameters tuned
+        Performs Q iteration for environment using q_model and exploration_policy.
+        q_model is updated
+
+        :param environment :
+            This is the MDP that we wish to use reinforcement learning on.
+            Should support step.
+        :param q_model : Function approximation to use. Typically a neural network.
+            Should support the () operation with numpy arrays and the fit operation. This is though with pytorch in mind.
+        :param exploration_policy : Policy to be used by agent to collect data for q iteration.
+            Default is Decaying Epsilon Greedy using q_model with hyperparameters tuned
         """
         super(QIteration, self).__init__(environment)
         self.q_model = q_model

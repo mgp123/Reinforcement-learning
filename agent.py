@@ -1,20 +1,23 @@
+from policy import Policy
+from type_definitions import StateType
+
 
 class Agent(object):
 
-    def __init__(self, environment, policy):
+    def __init__(self, environment, policy: Policy):
         """
-            Parameters
-            ----------
-            environment : should support step
-                the environment in which the agent interacts. ie acts upon and receives states and rewards
-            policy :
-                Dictates how the agent must react to each state.
+        Agent is in charge of carrying out any interaction with the environment. Only element that executes step
+
+        :param environment:
+            The environment in which the agent interacts. ie acts upon and receives states and rewards.
+            Should support step.
+        :param policy: Dictates how the agent must react to each state.
         """
 
         self.environment = environment
         self.policy = policy
 
-    def act(self, state):
+    def act(self, state: StateType):
         # should return action to perform
         return self.policy(state)
 
@@ -47,5 +50,5 @@ class Agent(object):
 
         self.policy.on_episode_end()
 
-    def set_policy(self, policy):
+    def set_policy(self, policy: Policy):
         self.policy = policy
