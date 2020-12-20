@@ -1,22 +1,24 @@
 import math
 import numpy as np
 
-from epsilon_greedy import EpsilonGreedyQPolicy
+from epsilon_greedy import DecayingEpsilonGreedyQPolicy, GreedyQPolicy
 from learner import *
 from agent import Agent
 from policy import Policy
 
 
 class QIteration(Learner):
-    def __init__(self, environment, q_model):
+    def __init__(self, environment, q_model, exploration_policy=None):
         """
-            :param environment : should support step
-                this is the MDP that we wish to use reinforcement learning on
-            :param q_model :
-                Function approximation to use. Typically a neural network.
+            :param environment : should support step.
+                This is the MDP that we wish to use reinforcement learning on
+            :param q_model : Function approximation to use. Typically a neural network.
                 Should support the () operation. This is though with pytorch in mind
+            :param exploration_policy : policy to be used by agent to collect data for q iteration.
+                Default is Decaying Epsilon Greedy using q_model with hyperparameters tuned
         """
         super(QIteration, self).__init__(environment)
+        self.q_model = q_model
         self.discount_factor = 0.95
 
         self.hyperparameters = {
@@ -27,15 +29,21 @@ class QIteration(Learner):
             # max amount of transitions the sampled trajectories should store
             "memory_buffer_size": math.inf,
             # how random should the policy be
-            "epsilon_policy": 0.1
+            "epsilon_policy": 0.1,
+            # decay factor for random should the policy
+            "epsilon_decay_policy": 0.95
         }
+
+        if exploration_policy is None:
+            exploration_policy = DecayingEpsilonGreedyQPolicy(
+                self.hyperparameters["epsilon_policy"],
+                q_model,
+                self.hyperparameters["epsilon_decay_policy"]
+            )
 
         self.agent = Agent(
             environment,
-            EpsilonGreedyQPolicy(
-                q_model,
-                self.hyperparameters["epsilon_policy"]
-            )
+            exploration_policy
         )
 
     def experience_replay(self, **kwargs):
@@ -50,7 +58,7 @@ class QIteration(Learner):
         state, action = transitions[:, 0], transitions[:, 1]
         reward, state_next = transitions[:, 2], transitions[:, 3]
 
-        q_model = self.agent.policy.q_model
+        q_model = self.q_model
 
         # key algorithm part. Assuming finite possible states
         # There is a (unique) fixed point (fixed function?) Q* such that
@@ -78,4 +86,4 @@ class QIteration(Learner):
                 after_each_step=[self.add_transition, self.experience_replay]
             )
 
-        return self.agent.policy
+        return GreedyQPolicy(q_model=self.q_model)

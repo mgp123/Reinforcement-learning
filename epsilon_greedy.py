@@ -6,6 +6,25 @@ from policy import Policy
 from type_definitions import StateType
 
 
+class GreedyQPolicy(Policy):
+    def __init__(self, q_model):
+        """
+        :param q_model: Q aproximator function. Typically a neural network.
+                Should support the () operation. This is though with pytorch in mind
+                Policy will behave epsilon greedy with respect to this
+        """
+        self.q_model = q_model
+
+    def __call__(self, state: StateType):
+        # to numpy
+        x = np.asarray([state])
+        q = self.q_model(x)
+
+        # max Q action
+        action = np.argmax(q, axis=0)
+        return action
+
+
 class EpsilonGreedyQPolicy(Policy):
     def __init__(self, q_model, epsilon: float):
         """
@@ -33,7 +52,6 @@ class EpsilonGreedyQPolicy(Policy):
 
 
 class DecayingEpsilonGreedyQPolicy(EpsilonGreedyQPolicy):
-
     def __init__(self, initial_epsilon: float, q_model, decay_factor: float):
         """
         :param q_model: Q aproximator function. Typically a neural network.
