@@ -18,7 +18,7 @@ class Agent(object):
         # should return action to perform
         return self.policy(state)
 
-    def perform_episode(self, before_start_of_episode=[], after_each_step=[], after_end_of_episode=[]):
+    def perform_episode(self, render=False, before_start_of_episode=[], after_each_step=[], after_end_of_episode=[]):
         state = self.environment.reset()
         done = False
 
@@ -29,6 +29,10 @@ class Agent(object):
 
         # episode loop
         while not done:
+
+            if render:
+                self.environment.render()
+
             action = self.act(state)
             state_next, reward, done, info = self.environment.step(action)
 
