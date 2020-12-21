@@ -51,12 +51,12 @@ class Learner(object):
         return reward_to_go
 
     def sample_transitions_from_stored_trajectories(self, n_samples) \
-            -> List[Tuple[StateType, ActionType, float, StateType]]:
+            -> List[Tuple[StateType, ActionType, float, StateType, bool]]:
         """
-        Samples transitions from stored trajectories. In case of terminal state, it gives none to state_next
+        Samples transitions from stored trajectories. In case of terminal state, it loops to first in trayectory
 
         :param n_samples: number of samples to take
-        :return: a list of (state, action, reward, state_next).
+        :return: a list of (state, action, reward, state_next, done).
         """
         n = self.amount_of_stored_transitions()
         ind_sample = [random.randint(0, n) for _ in range(n_samples)]
@@ -69,11 +69,13 @@ class Learner(object):
                 if i >= len(trajectory):
                     i -= len(trajectory)
                 else:
-                    state_next = None
-                    if i < len(trajectory) - 1:
+                    state_next = trajectory[0][state_index]
+                    done = i == len(trajectory) - 1
+
+                    if not done:
                         state_next = trajectory[i+1][state_index]
 
-                    transition = trajectory[i] + (state_next,)
+                    transition = trajectory[i] + (state_next, done)
                     res.append(transition)
                     break
         return res

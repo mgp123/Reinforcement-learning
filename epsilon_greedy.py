@@ -23,7 +23,7 @@ class GreedyQPolicy(Policy):
         q = self.q_model(x)
 
         # max Q action
-        action = torch.argmax(q, dim=0)[0]
+        action = torch.argmax(q, dim=0).item()
         return action
 
 

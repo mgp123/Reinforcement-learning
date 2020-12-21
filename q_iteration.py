@@ -27,7 +27,7 @@ class QIteration(Learner):
 
         self.hyperparameters = {
             # amount of samples to use to fit model in experience replay
-            "experience_replay_samples": 32,
+            "experience_replay_samples": 3,
             # episodes to train learner
             "episodes_to_train": 50,
             # max amount of transitions the sampled trajectories should store
@@ -57,12 +57,20 @@ class QIteration(Learner):
             return
 
         transitions = self.sample_transitions_from_stored_trajectories(n_samples)
-        # TODO fix state next == None cases
 
-        transitions = torch.tensor(transitions)
+        state, action, reward, state_next, done = [], [], [], [], []
+        for t in transitions:
+            state.append(t[0])
+            action.append(t[1])
+            reward.append(t[2])
+            state_next.append(t[3])
+            done.append(t[4])
 
-        state, action = transitions[:, 0], transitions[:, 1]
-        reward, state_next = transitions[:, 2], transitions[:, 3]
+        state = torch.tensor(state, dtype=torch.float32)
+        action = torch.tensor(action, dtype=torch.int64)
+        reward = torch.tensor(reward, dtype=torch.float32)
+        state_next = torch.tensor(state_next, dtype=torch.float32)
+        done = torch.tensor(done, dtype=torch.float32)
 
         q_model = self.q_model
 
@@ -77,9 +85,12 @@ class QIteration(Learner):
         # by using a function approximator, there is, in theory no guaranteed convergence
         # Empirically however, it works
 
-        q_max = torch.max(q_model(state_next), dim=1)
+        q_max = torch.max(q_model(state_next), dim=1).values
+        q_max = q_max*(1-done)  # zeroing out when there is no state_next
+
         target = q_model(state)
-        target[torch.arange(n_samples), action] = reward + self.discount_factor*q_max
+        # modifying the target in the q action that was actually performed
+        target = target.scatter_(1, action.unsqueeze(1), (reward + self.discount_factor*q_max).unsqueeze(1))
 
         q_model.fit(state, target)
 
