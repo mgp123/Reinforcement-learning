@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 
 from agent import Agent
+from epsilon_greedy import GreedyQPolicy
 from q_iteration import QIteration
 
 
@@ -49,16 +50,31 @@ class CartPoleQNet(nn.Module):
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    environment = gym.make("CartPole-v1")
 
-    q_model = CartPoleQNet()
-    optimizer = torch.optim.Adam(q_model.parameters(), lr=0.001)
-    loss_fn = nn.MSELoss()
-    q_model = NetWithOptimizer(q_model, optimizer, loss_fn)
+    training = True
 
-    learner = QIteration(environment=environment, q_model=q_model)
-    opt_policy = learner.learn_policy()
+    if training:
+        environment = gym.make("CartPole-v1")
+        q_model = CartPoleQNet()
+        optimizer = torch.optim.Adam(q_model.parameters(), lr=0.001)
+        loss_fn = nn.MSELoss()
+        q_model = NetWithOptimizer(q_model, optimizer, loss_fn)
 
-    agent = Agent(environment=environment, policy=opt_policy)
-    input("add anything to continue")
-    agent.perform_episode(render=True)
+        learner = QIteration(environment=environment, q_model=q_model)
+        opt_policy = learner.learn_policy()
+
+        torch.save(q_model.module, "learned networks/cartpole/q_network.dnet")
+
+        agent = Agent(environment=environment, policy=opt_policy)
+        input("add anything to continue")
+        agent.perform_episode(render=True)
+
+    else:
+        environment = gym.make("CartPole-v1")
+        q_model = torch.load("learned networks/cartpole/q_network.dnet")
+        opt_policy = GreedyQPolicy(q_model)
+        agent = Agent(environment=environment, policy=opt_policy)
+        agent.perform_episode(render=True)
+
+
+

@@ -1,4 +1,5 @@
-from random import randint
+import math
+from random import randint, shuffle
 from type_definitions import *
 import matplotlib.pyplot as plt
 
@@ -15,13 +16,18 @@ class AgentObserver(object):
 
 
 class TrajectoryObserver(AgentObserver):
-    def __init__(self):
+    def __init__(self, buffer_size=math.inf):
         """
         Stores trajectories performed by agent it attaches to. Currently it only supports being attached to only one active agent
+        :param buffer_size max amount of stored trajectories to have. Older trajectories are discarded
         """
         self.sampled_trajectories = []
+        self.buffer_size = buffer_size
 
     def on_episode_start(self, **kwargs):
+        if len(self.sampled_trajectories) == self.buffer_size:
+            self.sampled_trajectories = self.sampled_trajectories[1:]
+
         self.sampled_trajectories.append([])
 
     def on_step(self, state=None, action=None, reward=None, **kwargs):
@@ -46,9 +52,9 @@ class TrajectoryObserver(AgentObserver):
         reward_index = 2  # TODO get the index of reward in a better cleaner way
         reward_to_go = []
         current_reward_to_go = 0
-        for t in range(T-1, -1, 0):
+        for t in range(T - 1, -1, 0):
             reward = trajectory[t][reward_index]
-            current_reward_to_go = reward + discount_factor*current_reward_to_go
+            current_reward_to_go = reward + discount_factor * current_reward_to_go
             reward_to_go = [current_reward_to_go] + reward_to_go
         return reward_to_go
 
@@ -61,25 +67,37 @@ class TrajectoryObserver(AgentObserver):
         :return: a list of (state, action, reward, state_next, done).
         """
         n = self.amount_of_stored_transitions()
-        ind_sample = [randint(0, n) for _ in range(n_samples)]
+        ind_samples = [randint(0, n-1) for _ in range(n_samples)]
+        ind_samples.sort()
         res = []
         state_index = 0
 
-        # TODO make implementation faster by ordering ind_sample and going through sampled_trajectories once
-        for i in ind_sample:
-            for trajectory in self.sampled_trajectories:
-                if i >= len(trajectory):
-                    i -= len(trajectory)
-                else:
-                    state_next = trajectory[0][state_index]
-                    done = i == len(trajectory) - 1
+        iter_trajectory = iter(self.sampled_trajectories)
+        current_transition_ind = 0
+        trajectory = next(iter_trajectory)
 
-                    if not done:
-                        state_next = trajectory[i+1][state_index]
+        for ind_sample in ind_samples:
+            # advance trajectories until sample is in current trajectory
+            i = ind_sample - current_transition_ind
+            while i >= len(trajectory):
+                current_transition_ind += len(trajectory)
+                trajectory = next(iter_trajectory)
+                i = ind_sample - current_transition_ind
 
-                    transition = trajectory[i] + (state_next, done)
-                    res.append(transition)
-                    break
+            # construct transition
+            state_next = trajectory[0][state_index]  # in case there is no default state
+            done = i == len(trajectory) - 1
+
+            if not done:
+                state_next = trajectory[i + 1][state_index]
+
+            transition = trajectory[i] + (state_next, done)
+            res.append(transition)
+
+        # the transitions are ordered in time, so they do not behave exactly like a batch of sampled transitions
+        # to solve this problem, shuffle res before return
+        shuffle(res)
+
         return res
 
     def amount_of_stored_transitions(self) -> int:

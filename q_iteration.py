@@ -1,5 +1,5 @@
-import math
 import torch
+from tqdm import tqdm
 
 from agent_observer import TrajectoryObserver, RewardObserver
 from epsilon_greedy import DecayingEpsilonGreedyQPolicy, GreedyQPolicy
@@ -31,9 +31,8 @@ class QIteration(Learner):
             "experience_replay_samples": 32,
             # episodes to train learner
             "episodes_to_train": 200,
-            # max amount of transitions the sampled trajectories should store
-            # TODO use buffer size
-            "memory_buffer_size": math.inf,
+            # max amount of trajectories to store
+            "memory_buffer_size": 100,
             # how random should the policy be
             "epsilon_policy": 1.0,
             # decay factor for random should the policy
@@ -47,7 +46,7 @@ class QIteration(Learner):
                 self.hyperparameters["epsilon_decay_policy"]
             )
 
-        self.trajectories = TrajectoryObserver()
+        self.trajectories = TrajectoryObserver(buffer_size=self.hyperparameters["memory_buffer_size"])
         self.exploration_policy = exploration_policy
 
     def experience_replay(self, **kwargs):
@@ -86,12 +85,15 @@ class QIteration(Learner):
         # by using a function approximator, there is, in theory no guaranteed convergence
         # Empirically however, it works
 
-        q_max = torch.max(q_model(state_next), dim=1).values
-        q_max = q_max*(1-done)  # zeroing out when there is no state_next
+        # TODO Fix q_model so as not to accumulate gradient during act or on experience replay, only on fit
+        with torch.no_grad():
 
-        target = q_model(state)
-        # modifying the target in the q action that was actually performed
-        target = target.scatter_(1, action.unsqueeze(1), (reward + self.discount_factor*q_max).unsqueeze(1))
+            q_max = torch.max(q_model(state_next), dim=1).values
+            q_max = q_max*(1-done)  # zeroing out when there is no state_next
+
+            target = q_model(state)
+            # modifying the target in the q action that was actually performed
+            target = target.scatter_(1, action.unsqueeze(1), (reward + self.discount_factor*q_max).unsqueeze(1))
 
         q_model.fit(state, target)
 
@@ -103,9 +105,7 @@ class QIteration(Learner):
         agent.attach_observer(self.trajectories)
         agent.attach_observer(score)
 
-        # TODO Fix q_model so as not to accumulate gradient during act, only on experience replay
-
-        for episode in range(episodes):
+        for _ in tqdm(range(episodes)):
             agent.perform_episode(after_each_step=[self.experience_replay])
 
         score.plot()

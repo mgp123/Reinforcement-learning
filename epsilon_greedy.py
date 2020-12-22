@@ -56,7 +56,7 @@ class EpsilonGreedyQPolicy(Policy):
 
 
 class DecayingEpsilonGreedyQPolicy(EpsilonGreedyQPolicy):
-    def __init__(self, q_model: FunctionApproximatorType, initial_epsilon: float, decay_factor: float):
+    def __init__(self, q_model: FunctionApproximatorType, initial_epsilon: float, decay_factor: float, min_epsilon=0.1):
         """
         Policy that chooses action maximizing the q function with epsilon chance of random action.
         Epsilon decays after each episode
@@ -69,6 +69,8 @@ class DecayingEpsilonGreedyQPolicy(EpsilonGreedyQPolicy):
         """
         super(DecayingEpsilonGreedyQPolicy, self).__init__(initial_epsilon, q_model)
         self.decay_factor = decay_factor
+        self.min_epsilon = min_epsilon
 
     def on_episode_end(self):
         self.epsilon *= self.decay_factor
+        self.epsilon = max(self.epsilon, self.min_epsilon)
