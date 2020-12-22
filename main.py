@@ -35,10 +35,16 @@ class NetWithOptimizer(object):
 class CartPoleQNet(nn.Module):
     def __init__(self):
         super(CartPoleQNet, self).__init__()
-        self.fc1 = nn.Linear(4, 2)
+        self.model = nn.Sequential(
+            nn.Linear(4, 24),
+            nn.ReLU(),
+            nn.Linear(24, 24),
+            nn.ReLU(),
+            nn.Linear(24, 2)
+        )
 
     def forward(self, x):
-        return self.fc1(x)
+        return self.model(x)
 
 
 # Press the green button in the gutter to run the script.
@@ -46,7 +52,7 @@ if __name__ == '__main__':
     environment = gym.make("CartPole-v1")
 
     q_model = CartPoleQNet()
-    optimizer = torch.optim.Adam(q_model.parameters(), lr=0.0005)
+    optimizer = torch.optim.Adam(q_model.parameters(), lr=0.001)
     loss_fn = nn.MSELoss()
     q_model = NetWithOptimizer(q_model, optimizer, loss_fn)
 

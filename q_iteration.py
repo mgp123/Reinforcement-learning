@@ -24,18 +24,18 @@ class QIteration(Learner):
         """
         super(QIteration, self).__init__(environment)
         self.q_model = q_model
-        self.discount_factor = 0.99
+        self.discount_factor = 0.95
 
         self.hyperparameters = {
             # amount of samples to use to fit model in experience replay
             "experience_replay_samples": 32,
             # episodes to train learner
-            "episodes_to_train": 100,
+            "episodes_to_train": 200,
             # max amount of transitions the sampled trajectories should store
             # TODO use buffer size
             "memory_buffer_size": math.inf,
             # how random should the policy be
-            "epsilon_policy": 0.5,
+            "epsilon_policy": 1.0,
             # decay factor for random should the policy
             "epsilon_decay_policy": 0.95
         }

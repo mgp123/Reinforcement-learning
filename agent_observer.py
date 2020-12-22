@@ -2,6 +2,7 @@ from random import randint
 from type_definitions import *
 import matplotlib.pyplot as plt
 
+
 class AgentObserver(object):
     def on_episode_start(self, **kwargs):
         raise NotImplementedError
