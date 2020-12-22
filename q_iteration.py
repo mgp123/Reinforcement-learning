@@ -1,6 +1,7 @@
 import math
 import torch
 
+from agent_observer import TrajectoryObserver, RewardObserver
 from epsilon_greedy import DecayingEpsilonGreedyQPolicy, GreedyQPolicy
 from learner import *
 from agent import Agent
@@ -23,17 +24,18 @@ class QIteration(Learner):
         """
         super(QIteration, self).__init__(environment)
         self.q_model = q_model
-        self.discount_factor = 0.95
+        self.discount_factor = 0.99
 
         self.hyperparameters = {
             # amount of samples to use to fit model in experience replay
-            "experience_replay_samples": 3,
+            "experience_replay_samples": 32,
             # episodes to train learner
-            "episodes_to_train": 50,
+            "episodes_to_train": 100,
             # max amount of transitions the sampled trajectories should store
+            # TODO use buffer size
             "memory_buffer_size": math.inf,
             # how random should the policy be
-            "epsilon_policy": 0.1,
+            "epsilon_policy": 0.5,
             # decay factor for random should the policy
             "epsilon_decay_policy": 0.95
         }
@@ -45,19 +47,18 @@ class QIteration(Learner):
                 self.hyperparameters["epsilon_decay_policy"]
             )
 
-        self.agent = Agent(
-            environment,
-            exploration_policy
-        )
+        self.trajectories = TrajectoryObserver()
+        self.exploration_policy = exploration_policy
 
     def experience_replay(self, **kwargs):
         n_samples = self.hyperparameters["experience_replay_samples"]
 
-        if self.amount_of_stored_transitions() < n_samples:
+        if self.trajectories.amount_of_stored_transitions() < n_samples:
             return
 
-        transitions = self.sample_transitions_from_stored_trajectories(n_samples)
+        transitions = self.trajectories.sample_transitions_from_stored_trajectories(n_samples)
 
+        # TODO transform to torch in a cleaner way
         state, action, reward, state_next, done = [], [], [], [], []
         for t in transitions:
             state.append(t[0])
@@ -96,13 +97,17 @@ class QIteration(Learner):
 
     def learn_policy(self) -> Policy:
         episodes = self.hyperparameters["episodes_to_train"]
+        agent = Agent(self.environment, self.exploration_policy)
+
+        score = RewardObserver()
+        agent.attach_observer(self.trajectories)
+        agent.attach_observer(score)
 
         # TODO Fix q_model so as not to accumulate gradient during act, only on experience replay
 
         for episode in range(episodes):
-            self.agent.perform_episode(
-                before_start_of_episode=[self.begin_trajectory],
-                after_each_step=[self.add_transition, self.experience_replay]
-            )
+            agent.perform_episode(after_each_step=[self.experience_replay])
+
+        score.plot()
 
         return GreedyQPolicy(q_model=self.q_model)

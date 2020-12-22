@@ -11,7 +11,7 @@ class GreedyQPolicy(Policy):
         """
         Policy that chooses action maximizing  the q function
 
-        :param q_model: Q aproximator function. Typically a neural network.
+        :param q_model: Q approximator function. Typically a neural network.
                 Should support the () operation with torch arrays. This is though with pytorch in mind.
                 Policy will behave epsilon greedy with respect to this q_model
         """
@@ -19,8 +19,8 @@ class GreedyQPolicy(Policy):
 
     def __call__(self, state: StateType):
         # to torch
-        x = torch.tensor([state])
-        q = self.q_model(x)
+        x = torch.tensor([state], dtype=torch.float32)
+        q = self.q_model(x)[0]
 
         # max Q action
         action = torch.argmax(q, dim=0).item()
@@ -32,7 +32,7 @@ class EpsilonGreedyQPolicy(Policy):
         """
         Policy that chooses action maximizing the q function with epsilon chance of random action
 
-        :param q_model: Q aproximator function. Typically a neural network.
+        :param q_model: Q approximator function. Typically a neural network.
                 Should support the () operation. This is though with pytorch in mind
                 Policy will behave epsilon greedy with respect to this
         :param epsilon: probability of taking random action
@@ -61,7 +61,7 @@ class DecayingEpsilonGreedyQPolicy(EpsilonGreedyQPolicy):
         Policy that chooses action maximizing the q function with epsilon chance of random action.
         Epsilon decays after each episode
 
-        :param q_model: Q aproximator function. Typically a neural network.
+        :param q_model: Q approximator function. Typically a neural network.
                 SShould support the () operation with torch arrays. This is though with pytorch in mind
                 Policy will behave epsilon greedy with respect to this
         :param initial_epsilon: initial probability of taking random action

@@ -46,7 +46,7 @@ if __name__ == '__main__':
     environment = gym.make("CartPole-v1")
 
     q_model = CartPoleQNet()
-    optimizer = torch.optim.Adam(q_model.parameters(), lr=0.0001)
+    optimizer = torch.optim.Adam(q_model.parameters(), lr=0.0005)
     loss_fn = nn.MSELoss()
     q_model = NetWithOptimizer(q_model, optimizer, loss_fn)
 
@@ -54,4 +54,5 @@ if __name__ == '__main__':
     opt_policy = learner.learn_policy()
 
     agent = Agent(environment=environment, policy=opt_policy)
+    input("add anything to continue")
     agent.perform_episode(render=True)
