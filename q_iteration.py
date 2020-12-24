@@ -1,11 +1,27 @@
+import math
+from random import sample
 import torch
 from tqdm import tqdm
-
-from agent_observer import TrajectoryObserver, RewardObserver
 from epsilon_greedy import DecayingEpsilonGreedyQPolicy, GreedyQPolicy
 from learner import *
-from agent import Agent
 from policy import Policy
+
+
+class ReplayBuffer(object):
+    def __init__(self, buffer_size=math.inf):
+        self.transitions = []
+        self.buffer_size = buffer_size
+    
+    def add_transition(self, state, action, reward, state_next, done):
+        if self.size() == self.buffer_size:
+            self.transitions = self.transitions[1:]
+        self.transitions.append((state, action, reward, state_next, done))
+        
+    def size(self):
+        return len(self.transitions)
+
+    def sample_transitions(self, n_samples):
+        return sample(self.transitions, n_samples)
 
 
 class QIteration(Learner):
@@ -28,49 +44,23 @@ class QIteration(Learner):
 
         self.hyperparameters = {
             # amount of samples to use to fit model in experience replay
-            "experience_replay_samples": 32,
-            # episodes to train learner
-            "episodes_to_train": 200,
-            # max amount of trajectories to store
-            "memory_buffer_size": 100,
-            # how random should the policy be
-            "epsilon_policy": 1.0,
-            # decay factor for random should the policy
-            "epsilon_decay_policy": 0.95
+            "experience_replay_samples": 32
         }
 
         if exploration_policy is None:
-            exploration_policy = DecayingEpsilonGreedyQPolicy(
-                self.hyperparameters["epsilon_policy"],
-                q_model,
-                self.hyperparameters["epsilon_decay_policy"]
-            )
+            exploration_policy = DecayingEpsilonGreedyQPolicy(q_model, 1.0, 0.95)
 
-        self.trajectories = TrajectoryObserver(buffer_size=self.hyperparameters["memory_buffer_size"])
         self.exploration_policy = exploration_policy
+        self.replay_buffer = ReplayBuffer(buffer_size=2000)
 
     def experience_replay(self, **kwargs):
         n_samples = self.hyperparameters["experience_replay_samples"]
 
-        if self.trajectories.amount_of_stored_transitions() < n_samples:
+        if self.replay_buffer.size() < n_samples:
             return
 
-        transitions = self.trajectories.sample_transitions_from_stored_trajectories(n_samples)
-
-        # TODO transform to torch in a cleaner way
-        state, action, reward, state_next, done = [], [], [], [], []
-        for t in transitions:
-            state.append(t[0])
-            action.append(t[1])
-            reward.append(t[2])
-            state_next.append(t[3])
-            done.append(t[4])
-
-        state = torch.tensor(state, dtype=torch.float32)
-        action = torch.tensor(action, dtype=torch.int64)
-        reward = torch.tensor(reward, dtype=torch.float32)
-        state_next = torch.tensor(state_next, dtype=torch.float32)
-        done = torch.tensor(done, dtype=torch.float32)
+        transitions = self.replay_buffer.sample_transitions(n_samples)
+        action, done, reward, state, state_next = self.transitions_to_tensors(transitions)
 
         q_model = self.q_model
 
@@ -97,17 +87,48 @@ class QIteration(Learner):
 
         q_model.fit(state, target)
 
-    def learn_policy(self) -> Policy:
-        episodes = self.hyperparameters["episodes_to_train"]
-        agent = Agent(self.environment, self.exploration_policy)
+    def transitions_to_tensors(self, transitions):
+        # TODO transform to torch in a cleaner way
+        state, action, reward, state_next, done = [], [], [], [], []
 
-        score = RewardObserver()
-        agent.attach_observer(self.trajectories)
-        agent.attach_observer(score)
+        for t in transitions:
+            state.append(t[0])
+            action.append(t[1])
+            reward.append(t[2])
+            state_next.append(t[3])
+            done.append(t[4])
 
+        state = torch.tensor(state, dtype=torch.float32)
+        action = torch.tensor(action, dtype=torch.int64)
+        reward = torch.tensor(reward, dtype=torch.float32)
+        state_next = torch.tensor(state_next, dtype=torch.float32)
+        done = torch.tensor(done, dtype=torch.float32)
+
+        return action, done, reward, state, state_next
+
+    def learn_policy(self, episodes=200, experience_replay_samples=32, buffer_size=30000) -> Policy:
+        self.hyperparameters["experience_replay_samples"] = experience_replay_samples
+        self.replay_buffer = ReplayBuffer(buffer_size)
+        environment = self.environment
+        exploration_policy = self.exploration_policy
+        
+        score = []
+        
         for _ in tqdm(range(episodes)):
-            agent.perform_episode(after_each_step=[self.experience_replay])
+            done = False
+            state = environment.reset()
+            episode_score = 0
 
-        score.plot()
+            while not done:
+                action = exploration_policy(state)
+                state_next, reward, done, info = environment.step(action)
+
+                self.replay_buffer.add_transition(state, action, reward, state_next, done)
+                self.experience_replay()
+
+                state = state_next
+                episode_score += reward
+            
+            score.append(episode_score)
 
         return GreedyQPolicy(q_model=self.q_model)

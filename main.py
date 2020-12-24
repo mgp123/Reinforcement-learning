@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 
 from agent import Agent
-from epsilon_greedy import GreedyQPolicy
+from epsilon_greedy import GreedyQPolicy, DecayingEpsilonGreedyQPolicy
 from q_iteration import QIteration
 
 
@@ -33,29 +33,18 @@ class NetWithOptimizer(object):
         return self.gradient_step(x, y)
 
 
-class CartPoleQNet(nn.Module):
-    def __init__(self):
-        super(CartPoleQNet, self).__init__()
-        self.model = nn.Sequential(
+def cartpoloe():
+    training = True
+
+    if training:
+        environment = gym.make("CartPole-v1")
+        q_model = nn.Sequential(
             nn.Linear(4, 24),
             nn.ReLU(),
             nn.Linear(24, 24),
             nn.ReLU(),
             nn.Linear(24, 2)
         )
-
-    def forward(self, x):
-        return self.model(x)
-
-
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-
-    training = True
-
-    if training:
-        environment = gym.make("CartPole-v1")
-        q_model = CartPoleQNet()
         optimizer = torch.optim.Adam(q_model.parameters(), lr=0.001)
         loss_fn = nn.MSELoss()
         q_model = NetWithOptimizer(q_model, optimizer, loss_fn)
@@ -77,4 +66,23 @@ if __name__ == '__main__':
         agent.perform_episode(render=True)
 
 
+# Press the green button in the gutter to run the script.
+if __name__ == '__main__':
+    environment = gym.make("MountainCar-v0")
+    q_model = nn.Sequential(
+        nn.Linear(2, 64),
+        nn.ReLU(),
+        nn.Linear(64, 3)
+    )
 
+    optimizer = torch.optim.Adam(q_model.parameters(), lr=0.002)
+    loss_fn = nn.MSELoss()
+    q_model = NetWithOptimizer(q_model, optimizer, loss_fn)
+
+    exploration = DecayingEpsilonGreedyQPolicy(q_model, initial_epsilon=1.0, decay_factor=0.95, min_epsilon=0.05)
+    learner = QIteration(environment=environment, q_model=q_model, exploration_policy=exploration)
+    opt_policy = learner.learn_policy(episodes=100)
+
+    agent = Agent(environment=environment, policy=opt_policy)
+    input("add anything to continue")
+    agent.perform_episode(render=True)

@@ -6,7 +6,7 @@ class Agent(object):
 
     def __init__(self, environment, policy: Policy):
         """
-        Agent is in charge of carrying out any interaction with the environment. Only element that executes step
+        Agent carries out interactions with the environment according to its current policy
 
         :param environment:
             The environment in which the agent interacts. ie acts upon and receives states and rewards.

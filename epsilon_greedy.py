@@ -67,7 +67,7 @@ class DecayingEpsilonGreedyQPolicy(EpsilonGreedyQPolicy):
         :param initial_epsilon: initial probability of taking random action
         :param decay_factor: multiplier to epsilon after end of each episode. Should be between 0 and 1
         """
-        super(DecayingEpsilonGreedyQPolicy, self).__init__(initial_epsilon, q_model)
+        super(DecayingEpsilonGreedyQPolicy, self).__init__(q_model, initial_epsilon)
         self.decay_factor = decay_factor
         self.min_epsilon = min_epsilon
 
