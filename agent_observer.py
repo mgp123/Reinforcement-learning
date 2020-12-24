@@ -16,7 +16,7 @@ class AgentObserver(object):
 
 
 class TrajectoryObserver(AgentObserver):
-    def __init__(self, buffer_size=math.inf):
+    def __init__(self, buffer_size: int = math.inf):
         """
         Stores trajectories performed by agent it attaches to. Currently it only supports being attached to only one active agent
         :param buffer_size max amount of stored trajectories to have. Older trajectories are discarded
@@ -40,24 +40,6 @@ class TrajectoryObserver(AgentObserver):
     def clear_trajectories(self):
         self.sampled_trajectories = []
 
-    @staticmethod
-    def get_reward_to_go(trajectory: TrajectoryType, discount_factor: float) -> List[float]:
-        """
-        :param discount_factor:
-        :param trajectory: ordered list of transitions (state, action, reward)
-        :return: the list of discounted reward to go for each point in trajectory
-        """
-
-        T = len(trajectory)
-        reward_index = 2  # TODO get the index of reward in a better cleaner way
-        reward_to_go = []
-        current_reward_to_go = 0
-        for t in range(T - 1, -1, 0):
-            reward = trajectory[t][reward_index]
-            current_reward_to_go = reward + discount_factor * current_reward_to_go
-            reward_to_go = [current_reward_to_go] + reward_to_go
-        return reward_to_go
-
     def sample_transitions_from_stored_trajectories(self, n_samples) \
             -> List[Tuple[StateType, ActionType, float, StateType, bool]]:
         """
@@ -67,7 +49,7 @@ class TrajectoryObserver(AgentObserver):
         :return: a list of (state, action, reward, state_next, done).
         """
         n = self.amount_of_stored_transitions()
-        ind_samples = [randint(0, n-1) for _ in range(n_samples)]
+        ind_samples = [randint(0, n - 1) for _ in range(n_samples)]
         ind_samples.sort()
         res = []
         state_index = 0
@@ -109,6 +91,9 @@ class TrajectoryObserver(AgentObserver):
             res += len(t)
         return res
 
+    def get_trajectories(self):
+        return self.sampled_trajectories
+
 
 class RewardObserver(AgentObserver):
     def __init__(self):
@@ -123,8 +108,13 @@ class RewardObserver(AgentObserver):
     def on_episode_end(self):
         pass
 
+    def get_rewards(self):
+        return self.trajectory_rewards
+
     def plot(self):
         plt.plot(self.trajectory_rewards)
         plt.xlabel('episode')
         plt.ylabel('total reward')
         plt.savefig("score.png")
+
+

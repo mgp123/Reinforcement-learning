@@ -2,7 +2,9 @@ import math
 from random import sample
 import torch
 from tqdm import tqdm
-from epsilon_greedy import DecayingEpsilonGreedyQPolicy, GreedyQPolicy
+
+import matplotlib.pyplot as plt
+from epsilon_greedy import GreedyQPolicy
 from learner import *
 from policy import Policy
 
@@ -11,12 +13,12 @@ class ReplayBuffer(object):
     def __init__(self, buffer_size=math.inf):
         self.transitions = []
         self.buffer_size = buffer_size
-    
+
     def add_transition(self, state, action, reward, state_next, done):
         if self.size() == self.buffer_size:
             self.transitions = self.transitions[1:]
         self.transitions.append((state, action, reward, state_next, done))
-        
+
     def size(self):
         return len(self.transitions)
 
@@ -25,7 +27,8 @@ class ReplayBuffer(object):
 
 
 class QIteration(Learner):
-    def __init__(self, environment, q_model: FunctionApproximatorType, exploration_policy: Policy = None):
+    def __init__(self, environment, q_model: FunctionApproximatorType, optimizer,
+                 exploration_policy: Policy, discount_factor=0.95):
         """
         Performs Q iteration for environment using q_model and exploration_policy.
         q_model is updated
@@ -33,25 +36,22 @@ class QIteration(Learner):
         :param environment :
             This is the MDP that we wish to use reinforcement learning on.
             Should support step.
+        :param optimizer to use for q_model
         :param q_model : Function approximation to use. Typically a neural network.
-            Should support the () operation with torch arrays and the fit operation. This is though with pytorch in mind.
+            Should support the () operation. This is though with pytorch in mind.
         :param exploration_policy : Policy to be used by agent to collect data for q iteration.
-            Default is Decaying Epsilon Greedy using q_model with hyperparameters tuned
         """
-        super(QIteration, self).__init__(environment)
+        super(QIteration, self).__init__(environment, discount_factor=discount_factor)
         self.q_model = q_model
-        self.discount_factor = 0.95
 
-        self.hyperparameters = {
-            # amount of samples to use to fit model in experience replay
-            "experience_replay_samples": 32
-        }
+        self.hyperparameters = {}
 
-        if exploration_policy is None:
-            exploration_policy = DecayingEpsilonGreedyQPolicy(q_model, 1.0, 0.95)
+        # if exploration_policy is None:
+        #   exploration_policy = DecayingEpsilonGreedyQPolicy(q_model, 1.0, 0.95)
 
         self.exploration_policy = exploration_policy
-        self.replay_buffer = ReplayBuffer(buffer_size=2000)
+        self.optimizer = optimizer
+        self.replay_buffer = None
 
     def experience_replay(self, **kwargs):
         n_samples = self.hyperparameters["experience_replay_samples"]
@@ -77,17 +77,17 @@ class QIteration(Learner):
 
         # TODO Fix q_model so as not to accumulate gradient during act or on experience replay, only on fit
         with torch.no_grad():
-
             q_max = torch.max(q_model(state_next), dim=1).values
-            q_max = q_max*(1-done)  # zeroing out when there is no state_next
+            q_max = q_max * (1 - done)  # zeroing out when there is no state_next
 
             target = q_model(state)
             # modifying the target in the q action that was actually performed
-            target = target.scatter_(1, action.unsqueeze(1), (reward + self.discount_factor*q_max).unsqueeze(1))
+            target = target.scatter_(1, action.unsqueeze(1), (reward + self.discount_factor * q_max).unsqueeze(1))
 
-        q_model.fit(state, target)
+        self.fit_model(state, target)
 
-    def transitions_to_tensors(self, transitions):
+    @staticmethod
+    def transitions_to_tensors(transitions):
         # TODO transform to torch in a cleaner way
         state, action, reward, state_next, done = [], [], [], [], []
 
@@ -111,12 +111,13 @@ class QIteration(Learner):
         self.replay_buffer = ReplayBuffer(buffer_size)
         environment = self.environment
         exploration_policy = self.exploration_policy
-        
+
         score = []
-        
+
         for _ in tqdm(range(episodes)):
             done = False
             state = environment.reset()
+            exploration_policy.on_episode_start()
             episode_score = 0
 
             while not done:
@@ -128,7 +129,26 @@ class QIteration(Learner):
 
                 state = state_next
                 episode_score += reward
-            
+
+            exploration_policy.on_episode_end()
             score.append(episode_score)
 
+        """
+        plt.plot(score)
+        plt.xlabel('episode')
+        plt.ylabel('total reward')
+        plt.savefig("score.png")
+        """
+
         return GreedyQPolicy(q_model=self.q_model)
+
+    def fit_model(self, state, target):
+        self.optimizer.zero_grad()
+
+        model_output = self.q_model(state)
+
+        loss = torch.nn.MSELoss()
+        loss(model_output, target).backward()
+
+        self.optimizer.step()
+
