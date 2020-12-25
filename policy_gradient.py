@@ -10,8 +10,6 @@ from policy import Policy
 from pytorch_utilities import list_of_tuples_to_tuple_of_tensors, get_reward_to_go
 from type_definitions import StateType
 
-score = []
-
 
 class StochasticPolicy(Policy):
 
@@ -26,7 +24,7 @@ class StochasticPolicy(Policy):
         x = torch.tensor([state], dtype=torch.float32)
         distribution = self.a_model(x)
         # TODO Check if correct
-        m = Categorical(logits=distribution)
+        m = Categorical(distribution)
         action = m.sample().item()
         return action
 
@@ -42,23 +40,29 @@ class PolicyGradient(Learner):
         self.optimizer.zero_grad()
         state_index = 0
         action_index = 1
+        reward_history = []
 
         policy = StochasticPolicy(self.a_model)
 
         for _ in tqdm(range(epochs)):
             for _ in range(episodes_per_update):
                 # collect trajectory and calculate reward to go
-                trajectory = self.collect_trajectory(policy)
-                reward_to_go = get_reward_to_go(trajectory, self.discount_factor)
+                trajectory, trajectory_reward = self.collect_trajectory(policy)
+                reward_history.append(trajectory_reward)
+                advantage = get_reward_to_go(trajectory, self.discount_factor)
 
                 # convert to pytorch tensors
                 trajectory = list_of_tuples_to_tuple_of_tensors(trajectory)
-                reward_to_go = torch.tensor(reward_to_go, dtype=torch.float32)
+                advantage = torch.tensor(advantage, dtype=torch.float32)
 
                 # calculate loss
-                policy_loss = Categorical(logits=self.a_model(trajectory[state_index]))
-                policy_loss = policy_loss.log_prob(trajectory[action_index]) * reward_to_go
-                policy_loss = policy_loss.mean()
+                policy_loss = Categorical(self.a_model(trajectory[state_index]))
+                policy_loss = - policy_loss.log_prob(trajectory[action_index]) * advantage
+                policy_loss = torch.sum(policy_loss)
+
+                # to take the expected gradient of episodes_per_update episodes,
+                # we divide the loss by episodes_per_update
+                policy_loss = policy_loss/episodes_per_update
 
                 # accumulate gradient
                 policy_loss.backward()
@@ -67,7 +71,7 @@ class PolicyGradient(Learner):
             self.optimizer.step()
             self.optimizer.zero_grad()
 
-        plt.plot(score)
+        plt.plot(reward_history)
         plt.xlabel('episode')
         plt.ylabel('total reward')
         plt.savefig("score.png")
@@ -84,6 +88,4 @@ class PolicyGradient(Learner):
 
         agent.perform_episode()
 
-        score.append(r_obs.get_rewards()[-1])
-
-        return t_obs.get_trajectories()[0]
+        return t_obs.get_trajectories()[0], r_obs.get_rewards()[0]
