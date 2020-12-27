@@ -28,10 +28,7 @@ class Agent(object):
 
         # before start of episode procedures
         #  --------------------------------
-        self.policy.on_episode_start()
-        self.inform_observers_episode_start(initial_state=state)
-        for f in before_start_of_episode:
-            f(initial_state=state)
+        self.start_episode(before_start_of_episode, state)
 
         # episode loop
         #  --------------------------------
@@ -39,23 +36,55 @@ class Agent(object):
             if render:
                 self.environment.render()
 
-            action = self.act(state)
-            state_next, reward, done, info = self.environment.step(action)
-
-            # after each step procedures
-            #  --------------------------------
-            self.inform_observers_step(state, action, state_next, reward, done, info)
-            for f in after_each_step:
-                f(state=state, action=action, state_next=state_next, reward=reward, done=done, info=info)
+            state, action, reward, state_next, done = self.perform_step(state, after_each_step)
 
             state = state_next
 
         # after end of episode procedures
         #  --------------------------------
+        self.end_episode(after_end_of_episode)
+
+    def end_episode(self, after_end_of_episode):
         self.policy.on_episode_end()
         self.inform_observers_episode_end()
         for f in after_end_of_episode:
             f()
+
+    def start_episode(self, before_start_of_episode, state):
+        self.policy.on_episode_start()
+        self.inform_observers_episode_start(initial_state=state)
+        for f in before_start_of_episode:
+            f(initial_state=state)
+
+    def perform_step(self, state, after_each_step=[]):
+        action = self.act(state)
+        state_next, reward, done, info = self.environment.step(action)
+        # after each step procedures
+        #  --------------------------------
+        self.inform_observers_step(state, action, state_next, reward, done, info)
+        for f in after_each_step:
+            f(state=state, action=action, state_next=state_next, reward=reward, done=done, info=info)
+
+        return state, action, reward, state_next, done
+
+    def yield_transition(self, before_start_of_episode=[], after_each_step=[], after_end_of_episode=[]):
+        """
+        Infinite transition generator
+        :return: (state, action, reward, state_next, done)
+        """
+        while True:
+            done = False
+            state = self.environment.reset()
+
+            self.start_episode(before_start_of_episode, state)
+
+            while not done:
+                state, action, reward, state_next, done = self.perform_step(state, after_each_step)
+                yield state, action, reward, state_next, done
+
+                state = state_next
+
+            self.end_episode(after_end_of_episode)
 
     def set_policy(self, policy: Policy):
         self.policy = policy

@@ -37,7 +37,7 @@ class TrajectoryObserver(AgentObserver):
     def on_episode_end(self):
         pass
 
-    def clear_trajectories(self):
+    def clear(self):
         self.sampled_trajectories = []
 
     def sample_transitions_from_stored_trajectories(self, n_samples) \
@@ -94,6 +94,9 @@ class TrajectoryObserver(AgentObserver):
     def get_trajectories(self):
         return self.sampled_trajectories
 
+    def last_trajectory(self):
+        return self.get_trajectories()[-1]
+
 
 class RewardObserver(AgentObserver):
     def __init__(self):
@@ -110,6 +113,9 @@ class RewardObserver(AgentObserver):
 
     def get_rewards(self):
         return self.trajectory_rewards
+
+    def last_reward(self):
+        return self.get_rewards()[-1]
 
     def plot(self):
         plt.plot(self.trajectory_rewards)
