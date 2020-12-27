@@ -1,5 +1,4 @@
 import torch
-from torch.distributions import Categorical
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
@@ -13,27 +12,25 @@ from type_definitions import StateType
 
 class StochasticPolicy(Policy):
 
-    def __init__(self, a_model):
+    def __init__(self, a_distribution_model):
         """
-        Policy that chooses action according to the distribution of actions given by a_model(state)
-        :param a_model: Model that for any given state, outputs a probabilistic distribution of actions
+        Policy that chooses action according to the distribution of actions given by a_distribution_model(state)
+        :param a_distribution_model: Model that for any given state, outputs a torch.distribution of actions
         """
-        self.a_model = a_model
+        self.a_distribution_model = a_distribution_model
 
     def __call__(self, state: StateType):
         x = torch.tensor([state], dtype=torch.float32)
-        distribution = self.a_model(x)
-        # TODO Check if correct
-        m = Categorical(distribution)
-        action = m.sample().item()
-        return action
+        distribution = self.a_distribution_model(x)
+        action = distribution.sample()[0]
+        return action.tolist()
 
 
 class PolicyGradient(Learner):
 
-    def __init__(self, environment, a_model, optimizer, discount_factor=0.95):
+    def __init__(self, environment, a_distribution_model, optimizer, discount_factor=0.95):
         super(PolicyGradient, self).__init__(environment, discount_factor)
-        self.a_model = a_model
+        self.a_distribution_model = a_distribution_model
         self.optimizer = optimizer
 
     def learn_policy(self, epochs=200, episodes_per_update=1) -> Policy:
@@ -42,7 +39,7 @@ class PolicyGradient(Learner):
         action_index = 1
         reward_history = []
 
-        policy = StochasticPolicy(self.a_model)
+        policy = StochasticPolicy(self.a_distribution_model)
 
         for _ in tqdm(range(epochs)):
             for _ in range(episodes_per_update):
@@ -56,7 +53,7 @@ class PolicyGradient(Learner):
                 advantage = torch.tensor(advantage, dtype=torch.float32)
 
                 # calculate loss
-                policy_loss = Categorical(self.a_model(trajectory[state_index]))
+                policy_loss = self.a_distribution_model(trajectory[state_index])
                 policy_loss = - policy_loss.log_prob(trajectory[action_index]) * advantage
                 policy_loss = torch.sum(policy_loss)
 
