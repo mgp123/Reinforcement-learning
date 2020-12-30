@@ -7,5 +7,5 @@ class Learner(object):
         self.environment = environment
         self.discount_factor = discount_factor
 
-    def learn_policy(self, *args, **kwargs) -> Policy:
+    def learn_policy(self, *args, **kwargs) -> Tuple[Policy, List[float]]:
         raise NotImplementedError

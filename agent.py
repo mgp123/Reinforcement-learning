@@ -67,7 +67,7 @@ class Agent(object):
 
         return state, action, reward, state_next, done
 
-    def yield_transition(self, before_start_of_episode=[], after_each_step=[], after_end_of_episode=[]):
+    def transition_generator(self, before_start_of_episode=[], after_each_step=[], after_end_of_episode=[]):
         """
         Infinite transition generator
         :return: (state, action, reward, state_next, done)

@@ -7,7 +7,7 @@ from pytorch_utilities import get_reward_to_go, list_of_tuples_to_tuple_of_tenso
 
 
 class MonteCarloVEstimator(TrajectoryObserver):
-    def __init__(self, v_model, v_optimizer, discount_factor, automatic_update=False, episodes_to_update=1):
+    def __init__(self, v_model, v_optimizer, discount_factor, automatic_update=True, episodes_to_update=1):
         super().__init__()
         self.automatic_update = automatic_update
         self.v_model = v_model

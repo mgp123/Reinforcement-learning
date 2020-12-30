@@ -1,5 +1,4 @@
 import torch
-import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 from agent import Agent
@@ -36,7 +35,7 @@ class PolicyGradient(Learner):
         self.a_distribution_model = a_distribution_model
         self.optimizer = optimizer
 
-    def learn_policy(self, epochs=200, episodes_per_update=1) -> Policy:
+    def learn_policy(self, epochs=200, episodes_per_update=1):
         self.optimizer.zero_grad()
         state_index = 0
         action_index = 1
@@ -56,7 +55,7 @@ class PolicyGradient(Learner):
                 agent.perform_episode()
 
                 # collect trajectory and calculate reward to go
-                trajectory, trajectory_reward = t_obs.last_trajectory(), r_obs.last_reward()
+                trajectory = t_obs.last_trajectory()
                 reward_to_go = get_reward_to_go(trajectory, self.discount_factor)
 
                 # convert to pytorch tensors
@@ -81,9 +80,4 @@ class PolicyGradient(Learner):
 
             t_obs.clear()
 
-        plt.plot(r_obs.get_rewards())
-        plt.xlabel('episode')
-        plt.ylabel('total reward')
-        plt.savefig("score.png")
-
-        return policy
+        return policy, r_obs.get_rewards()

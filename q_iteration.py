@@ -3,7 +3,6 @@ from random import sample
 import torch
 from tqdm import tqdm
 
-import matplotlib.pyplot as plt
 from epsilon_greedy import GreedyQPolicy
 from learner import *
 from policy import Policy
@@ -106,7 +105,8 @@ class QIteration(Learner):
 
         return action, done, reward, state, state_next
 
-    def learn_policy(self, episodes=200, experience_replay_samples=32, buffer_size=30000) -> Policy:
+    def learn_policy(self, episodes=200, experience_replay_samples=32, buffer_size=30000) -> Tuple[
+        GreedyQPolicy, List[int]]:
         self.hyperparameters["experience_replay_samples"] = experience_replay_samples
         self.replay_buffer = ReplayBuffer(buffer_size)
         environment = self.environment
@@ -133,14 +133,7 @@ class QIteration(Learner):
             exploration_policy.on_episode_end()
             score.append(episode_score)
 
-        """
-        plt.plot(score)
-        plt.xlabel('episode')
-        plt.ylabel('total reward')
-        plt.savefig("score.png")
-        """
-
-        return GreedyQPolicy(q_model=self.q_model)
+        return GreedyQPolicy(q_model=self.q_model), score
 
     def fit_model(self, state, target):
         self.optimizer.zero_grad()

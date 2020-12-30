@@ -11,7 +11,7 @@ def list_of_tuples_to_tuple_of_tensors(transition_list):
     tensor of bs, tensor of cs....)
     """
     res = []
-    [res.append([]) for _ in range(len(transition_list))]
+    [res.append([]) for _ in range(len(transition_list[0]))]
 
     for point in transition_list:
         index = 0
