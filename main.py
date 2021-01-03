@@ -87,12 +87,11 @@ def pl_grad():
     input("add anything to continue")
     agent.perform_episode(render=True)
 
-    # torch.save(a_distribution_model, "learned networks/cartpole/a_network.torch")
+    # torch.save(actor, "learned networks/cartpole/a_network.torch")
 
 
 def walker():
-    global action_distribution_model
-    environment = gym.make("BipedalWalker-v3")
+    environment = gym.make("Pendulum-v0")
     print(environment.action_space)
     print(environment.observation_space)
 
@@ -101,42 +100,37 @@ def walker():
         def __init__(self):
             super(action_distribution_model, self).__init__()
             self.secquential = nn.Sequential(
-                nn.Linear(24, 24),
+                nn.Linear(3, 24),
                 nn.ReLU(),
+                nn.Linear(24, 1, bias = False),
+                nn.Tanh()
             )
 
-            self.mean_layer = nn.Linear(24, 4)
-            self.covariance_layer = nn.Linear(24, 4 ** 2)
-
         def forward(self, x):
-            x = self.secquential(x)
-            mean = self.mean_layer(x)
+            mean = self.secquential(x)
+            mean = mean*4
 
-            covariance = self.covariance_layer(x)
-            covariance = covariance.view(-1, 4, 4)
-            covariance = torch.matmul(covariance, torch.transpose(covariance, 1, 2))  # semi-definite positive
-            #  property: alpha * I + sigma is positive definite for alpha != 0 and sigma semi def pos
-            # this also causes each component variance to have a minimum of alpha
-            # so alpha should be chosen carefully as to not perturb optimal solution too much
-            covariance = covariance + torch.eye(4) * 0.005
-
-            return MultivariateNormal(mean, torch.eye(4) * 0.1)
+            return MultivariateNormal(mean, torch.eye(1) * 0.25)
 
     distribution = action_distribution_model()
     optimizer = torch.optim.Adam(distribution.parameters(), lr=0.01)
 
     v_model = nn.Sequential(
-        nn.Linear(24, 24),
+        nn.Linear(3, 24),
         nn.ReLU(),
         nn.Linear(24, 1)
     )
     v_optimizer = torch.optim.Adam(v_model.parameters(), lr=0.01)
 
-    learner = ActorCriticBootstrappedVEstimate(
+    learner = PPO(
         environment,
-        distribution, optimizer, v_model, v_optimizer, discount_factor=0.99)
+        distribution, optimizer, discount_factor=0.99)
 
-    opt_policy, history = learner.learn_policy(epochs=500,v_initialization_episodes=0)
+    opt_policy, history = learner.learn_policy(
+        epochs=250,
+        actor_iterations=10,
+        episodes_per_update=2
+    )
     plt.plot(history)
     plt.xlabel('episode')
     plt.ylabel('total reward')
@@ -149,7 +143,7 @@ def walker():
 
 def actor_critic_cartpole():
     environment = gym.make("CartPole-v1")
-    for init_epochs in [0,10,15,30]:
+    for init_epochs in [0, 10, 15, 30]:
         net = nn.Sequential(
             nn.Linear(4, 40, bias=False),
             nn.ReLU(),
@@ -192,6 +186,7 @@ def actor_critic_cartpole():
     plt.ylabel('total reward')
     plt.savefig("score.png")
 
+
 def ppo():
     class actor_model(nn.Module):
         def __init__(self):
@@ -210,23 +205,27 @@ def ppo():
 
     actor = actor_model()
     a_optimizer = torch.optim.Adam(actor.parameters(), lr=0.01)
-    v_model = nn.Sequential(
-        nn.Linear(4, 40),
+
+    critic = nn.Sequential(
+        nn.Linear(4, 20),
         nn.ReLU(),
-        nn.Linear(40, 1),
+        nn.Linear(20, 1)
     )
 
-    v_optimizer = torch.optim.Adam(v_model.parameters(), lr=0.01)
+    c_optimizer = torch.optim.Adam(critic.parameters(), lr=0.01)
 
     environment = gym.make("CartPole-v1")
-    learner = PPO(environment, actor, a_optimizer, v_model, v_optimizer, discount_factor=0.99)
+    learner = PPO(
+        environment,
+        actor, a_optimizer,
+        critic, c_optimizer,
+        discount_factor=0.99)
 
     opt, rew = learner.learn_policy(
         epochs=250,
-        actor_iterations=20,
-        critic_iterations=20,
-        transition_batch=100,
-        v_initialization_episodes=50
+        actor_iterations=70,
+        critic_iterations=70,
+        episodes_per_update=1
     )
 
     plt.plot(rew)
@@ -234,9 +233,9 @@ def ppo():
     plt.ylabel('total reward')
     plt.savefig("score.png")
 
+
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     seed(2020)
     torch.manual_seed(2020)
     ppo()
-

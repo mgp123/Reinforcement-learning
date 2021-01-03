@@ -1,5 +1,7 @@
 import math
 from random import randint, shuffle
+
+from pytorch_utilities import get_reward_to_go
 from type_definitions import *
 import matplotlib.pyplot as plt
 
@@ -43,7 +45,7 @@ class TrajectoryObserver(AgentObserver):
     def sample_transitions_from_stored_trajectories(self, n_samples) \
             -> List[Tuple[StateType, ActionType, float, StateType, bool]]:
         """
-        Samples transitions from stored trajectories. In case of terminal state, it loops to first in trajectory
+        Samples trajectories from stored trajectories. In case of terminal state, it loops to first in trajectory
 
         :param n_samples: number of samples to take
         :return: a list of (state, action, reward, state_next, done).
@@ -76,7 +78,7 @@ class TrajectoryObserver(AgentObserver):
             transition = trajectory[i] + (state_next, done)
             res.append(transition)
 
-        # the transitions are ordered in time, so they do not behave exactly like a batch of sampled transitions
+        # the trajectories are ordered in time, so they do not behave exactly like a batch of sampled trajectories
         # to solve this problem, shuffle res before return
         shuffle(res)
 
@@ -84,7 +86,7 @@ class TrajectoryObserver(AgentObserver):
 
     def amount_of_stored_transitions(self) -> int:
         """
-        Sums all the transitions in all the already sampled trajectories
+        Sums all the trajectories in all the already sampled trajectories
         """
         res = 0
         for t in self.sampled_trajectories:
@@ -97,6 +99,8 @@ class TrajectoryObserver(AgentObserver):
     def last_trajectory(self):
         return self.get_trajectories()[-1]
 
+    def reward_to_go(self, discount_factor):
+        return [get_reward_to_go(t, discount_factor) for t in self.sampled_trajectories]
 
 class RewardObserver(AgentObserver):
     def __init__(self):

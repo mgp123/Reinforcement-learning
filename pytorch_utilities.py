@@ -26,7 +26,7 @@ def list_of_tuples_to_tuple_of_tensors(transition_list):
 def get_reward_to_go(trajectory: TrajectoryType, discount_factor: float) -> List[float]:
     """
     :param discount_factor:
-    :param trajectory: ordered list of transitions (state, action, reward)
+    :param trajectory: ordered list of trajectories (state, action, reward)
     :return: the list of discounted reward to go for each point in trajectory
     """
 

@@ -13,7 +13,7 @@ class StochasticPolicy(Policy):
 
     def __init__(self, a_distribution_model):
         """
-        Policy that chooses action according to the distribution of actions given by a_distribution_model(state)
+        Policy that chooses action according to the distribution of actions given by actor(state)
         :param a_distribution_model: Model that for any given state, outputs a torch.distribution of actions
         """
         self.a_distribution_model = a_distribution_model
