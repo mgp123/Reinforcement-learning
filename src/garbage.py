@@ -1,17 +1,15 @@
-from random import seed
-import matplotlib.pyplot as plt
-
 import gym
 import torch
-import torch.nn as nn
+from matplotlib import pyplot as plt
+from torch import nn as nn
 from torch.distributions import Categorical, MultivariateNormal
 
-from actor_critic import ActorCriticMonteCarloVEstimate, ActorCriticBootstrappedVEstimate
-from agent import Agent
-from epsilon_greedy import GreedyQPolicy, DecayingEpsilonGreedyQPolicy
-from policy_gradient import PolicyGradient, StochasticPolicy
-from ppo import PPO
-from q_iteration import QIteration
+from src.algorithms.actor_critic import ActorCriticBootstrappedVEstimate
+from src.agent import Agent
+from src.epsilon_greedy import DecayingEpsilonGreedyQPolicy, GreedyQPolicy
+from src.algorithms.policy_gradient import PolicyGradient
+from src.algorithms.ppo import PPO
+from src.algorithms.q_iteration import QIteration
 
 
 def cartpoloe():
@@ -223,8 +221,8 @@ def ppo():
 
     opt, rew = learner.learn_policy(
         epochs=250,
-        actor_iterations=70,
-        critic_iterations=70,
+        actor_iterations=100,
+        critic_iterations=20,
         episodes_per_update=1
     )
 
@@ -232,10 +230,3 @@ def ppo():
     plt.xlabel('episode')
     plt.ylabel('total reward')
     plt.savefig("score.png")
-
-
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    seed(2020)
-    torch.manual_seed(2020)
-    ppo()

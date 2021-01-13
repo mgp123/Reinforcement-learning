@@ -1,5 +1,5 @@
-from policy import Policy
-from type_definitions import *
+from src.policy import Policy
+from src.type_definitions import *
 
 
 class Learner(object):

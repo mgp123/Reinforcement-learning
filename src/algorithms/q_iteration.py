@@ -1,28 +1,10 @@
-import math
-from random import sample
 import torch
 from tqdm import tqdm
 
-from epsilon_greedy import GreedyQPolicy
-from learner import *
-from policy import Policy
-
-
-class ReplayBuffer(object):
-    def __init__(self, buffer_size=math.inf):
-        self.transitions = []
-        self.buffer_size = buffer_size
-
-    def add_transition(self, state, action, reward, state_next, done):
-        if self.size() == self.buffer_size:
-            self.transitions = self.transitions[1:]
-        self.transitions.append((state, action, reward, state_next, done))
-
-    def size(self):
-        return len(self.transitions)
-
-    def sample_transitions(self, n_samples):
-        return sample(self.transitions, n_samples)
+from src.agent_observer import ReplayBuffer
+from src.epsilon_greedy import GreedyQPolicy
+from src.learner import *
+from src.policy import Policy
 
 
 class QIteration(Learner):
@@ -144,4 +126,3 @@ class QIteration(Learner):
         loss(model_output, target).backward()
 
         self.optimizer.step()
-

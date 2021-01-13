@@ -2,8 +2,8 @@ from random import random, randint
 
 import torch
 
-from policy import Policy
-from type_definitions import StateType, FunctionApproximatorType
+from src.policy import Policy
+from src.type_definitions import StateType, FunctionApproximatorType
 
 
 class GreedyQPolicy(Policy):

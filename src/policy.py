@@ -1,4 +1,4 @@
-from type_definitions import StateType
+from src.type_definitions import StateType
 
 # TODO methods to  save and load a policy from file
 

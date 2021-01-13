@@ -3,12 +3,12 @@ from typing import Tuple, List
 import torch
 from tqdm import tqdm
 
-from agent import Agent
-from agent_observer import RewardObserver, TrajectoryObserver
-from learner import Learner
-from policy import Policy
-from policy_gradient import StochasticPolicy
-from pytorch_utilities import list_of_tuples_to_tuple_of_tensors
+from src.agent import Agent
+from src.agent_observer import RewardObserver, TrajectoryObserver
+from src.learner import Learner
+from src.policy import Policy
+from src.stochastic_policy import StochasticPolicy
+from src.pytorch_utilities import list_of_tuples_to_tuple_of_tensors
 
 
 def concatenate(list_of_lists):

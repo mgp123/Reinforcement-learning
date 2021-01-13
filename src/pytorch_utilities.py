@@ -2,7 +2,7 @@ from typing import List
 
 import torch
 
-from type_definitions import TrajectoryType
+from src.type_definitions import TrajectoryType
 
 
 def list_of_tuples_to_tuple_of_tensors(transition_list):

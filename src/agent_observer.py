@@ -1,8 +1,8 @@
 import math
-from random import randint, shuffle
+from random import randint, shuffle, sample
 
-from pytorch_utilities import get_reward_to_go
-from type_definitions import *
+from src.pytorch_utilities import get_reward_to_go
+from src.type_definitions import *
 import matplotlib.pyplot as plt
 
 
@@ -102,6 +102,7 @@ class TrajectoryObserver(AgentObserver):
     def reward_to_go(self, discount_factor):
         return [get_reward_to_go(t, discount_factor) for t in self.sampled_trajectories]
 
+
 class RewardObserver(AgentObserver):
     def __init__(self):
         self.trajectory_rewards = []
@@ -130,4 +131,32 @@ class RewardObserver(AgentObserver):
     def add(self, new_rewards):
         self.trajectory_rewards += new_rewards
 
+    def size(self):
+        return len(self.trajectory_rewards)
 
+
+class ReplayBuffer(AgentObserver):
+
+    def __init__(self, buffer_size=math.inf):
+        self.transitions = []
+        self.buffer_size = buffer_size
+
+    def add_transition(self, state, action, reward, state_next, done):
+        if self.size() == self.buffer_size:
+            self.transitions = self.transitions[1:]
+        self.transitions.append((state, action, reward, state_next, done))
+
+    def size(self):
+        return len(self.transitions)
+
+    def sample_transitions(self, n_samples):
+        return sample(self.transitions, n_samples)
+
+    def on_episode_start(self, **kwargs):
+        pass
+
+    def on_step(self, state, action, reward, state_next, done):
+        self.add_transition(state, action, reward, state_next, done)
+
+    def on_episode_end(self):
+        pass

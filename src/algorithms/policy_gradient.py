@@ -1,28 +1,11 @@
 import torch
 from tqdm import tqdm
 
-from agent import Agent
-from agent_observer import TrajectoryObserver, RewardObserver
-from learner import Learner
-from policy import Policy
-from pytorch_utilities import list_of_tuples_to_tuple_of_tensors, get_reward_to_go
-from type_definitions import StateType
-
-
-class StochasticPolicy(Policy):
-
-    def __init__(self, a_distribution_model):
-        """
-        Policy that chooses action according to the distribution of actions given by actor(state)
-        :param a_distribution_model: Model that for any given state, outputs a torch.distribution of actions
-        """
-        self.a_distribution_model = a_distribution_model
-
-    def __call__(self, state: StateType):
-        x = torch.tensor([state], dtype=torch.float32)
-        distribution = self.a_distribution_model(x)
-        action = distribution.sample()[0]
-        return action.tolist()
+from src.agent import Agent
+from src.agent_observer import TrajectoryObserver, RewardObserver
+from src.learner import Learner
+from src.pytorch_utilities import list_of_tuples_to_tuple_of_tensors, get_reward_to_go
+from src.stochastic_policy import StochasticPolicy
 
 
 class PolicyGradient(Learner):
