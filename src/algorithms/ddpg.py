@@ -23,6 +23,14 @@ class DDPG(Learner):
         self.a_model_target = copy.deepcopy(self.a_model)
         self.q_model_target = copy.deepcopy(self.q_model)
 
+    def gaussian_distribution(self, gaussian_noise_variance):
+        action_space_dimensions = self.environment.action_space.shape[0]
+        gaussian_noise = torch.distributions.Normal(
+            torch.zeros(action_space_dimensions),
+            gaussian_noise_variance * torch.ones(action_space_dimensions)
+        )
+        return gaussian_noise
+
     def learn_policy(self,
                      episodes=200,
                      experience_replay_samples=32,
@@ -31,11 +39,7 @@ class DDPG(Learner):
 
         pbar = tqdm(total=episodes)
 
-        action_space_dimensions = self.environment.action_space.shape[0]
-        gaussian_noise = torch.distributions.Normal(
-            torch.zeros(action_space_dimensions),
-            gaussian_noise_variance * torch.ones(action_space_dimensions)
-        )
+        gaussian_noise = self.gaussian_distribution(gaussian_noise_variance)
 
         policy = DeterministicPolicy(
             self.a_model,
@@ -43,38 +47,36 @@ class DDPG(Learner):
         )
         buffer = ReplayBuffer()
 
-        reward_tracker = RewardObserver()
+        reward_observer = RewardObserver()
         agent = Agent(self.environment, policy)
-        agent.attach_observer(reward_tracker)
+        agent.attach_observer(reward_observer)
 
         current_episode = 0
-        batch_transitions_collected = 0
 
         while current_episode < episodes:
             # collect transition
             state, action, reward, state_next, done = agent.step()
             # add to buffer
             buffer.add_transition(state, action, reward, state_next, done)
-            batch_transitions_collected += 1
+
+            # if enough transitions collected perform experience replay algorithm
+            if buffer.size() >= experience_replay_samples:
+                self.experience_replay(
+                    buffer.sample_transitions(experience_replay_samples),
+                    exponential_average_factor)
 
             # if episode ended, update progress
             if done:
                 current_episode += 1
                 pbar.update(1)
 
-            # if enough transitions collected, reset bach counter and perform experience replay
-            if batch_transitions_collected == experience_replay_samples:
-                self.experience_replay(
-                    buffer.sample_transitions(experience_replay_samples),
-                    exponential_average_factor)
-
-                batch_transitions_collected = 0
-
         pbar.close()
-        return DeterministicPolicy(self.a_model), reward_tracker.get_rewards()
+        return DeterministicPolicy(self.a_model), reward_observer.get_rewards()
 
     def experience_replay(self, transitions, exponential_average_factor):
         state, action, reward, state_next, done = list_of_tuples_to_tuple_of_tensors(transitions)
+        reward = torch.unsqueeze(reward, 1)
+        done = torch.unsqueeze(done, 1)
 
         # target for q_model
         action_target = self.a_model_target(state_next)
@@ -105,10 +107,5 @@ class DDPG(Learner):
 
 
 def update_exponential_average(model_to_update, new_model, update_factor):
-    weights_old = model_to_update.named_parameters()
-    weights_new = new_model.named_parameters()
-
-    for name, param in weights_new:
-        weights_old[name].data.copy_(
-            update_factor * weights_old[name].data + (1.0 - update_factor) * param.data
-        )
+    for weights_new, weights_old in zip(new_model.parameters(), model_to_update.parameters()):
+        weights_old.data.copy_(update_factor * weights_new.data + (1.0 - update_factor) * weights_old.data)
