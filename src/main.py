@@ -8,6 +8,7 @@ from torch import nn as nn
 
 from src.agent import Agent
 from src.algorithms.ddpg import DDPG
+from src.algorithms.td3 import TD3
 
 
 class Q_network(nn.Module):
@@ -32,7 +33,7 @@ a_model = nn.Sequential(
     nn.Tanh()
 )
 
-lr = 0.01
+lr = 0.03
 a_opt = torch.optim.Adam(a_model.parameters(), lr=lr)
 q_opt = torch.optim.Adam(q_model.parameters(), lr=lr)
 
@@ -41,16 +42,17 @@ if __name__ == '__main__':
     seed(2020)
     torch.manual_seed(2020)
     environment = gym.make("Pendulum-v0")
-    learner = DDPG(
+    learner = TD3(
         environment, 0.99,
         a_model, a_opt,
         q_model, q_opt
     )
 
     policy, rew = learner.learn_policy(
-        episodes=400,
+        episodes=300,
         experience_replay_samples=32,
         gaussian_noise_variance=0.15,
+        noise_bound=0.15,
         exponential_average_factor=0.005
     )
 

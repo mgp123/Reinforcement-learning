@@ -1,7 +1,7 @@
 import math
 from random import randint, shuffle, sample
 
-from src.pytorch_utilities import get_reward_to_go
+from src.utilities import get_reward_to_go
 from src.type_definitions import *
 import matplotlib.pyplot as plt
 

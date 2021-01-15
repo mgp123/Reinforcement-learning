@@ -5,7 +5,7 @@ from src.agent import Agent
 from src.agent_observer import RewardObserver, TrajectoryObserver
 from src.learner import Learner
 from src.stochastic_policy import StochasticPolicy
-from src.pytorch_utilities import list_of_tuples_to_tuple_of_tensors, get_reward_to_go
+from src.utilities import list_of_tuples_to_tuple_of_tensors, get_reward_to_go
 
 
 class ActorCritic(Learner):

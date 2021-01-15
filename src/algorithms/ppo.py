@@ -8,7 +8,7 @@ from src.agent_observer import RewardObserver, TrajectoryObserver
 from src.learner import Learner
 from src.policy import Policy
 from src.stochastic_policy import StochasticPolicy
-from src.pytorch_utilities import list_of_tuples_to_tuple_of_tensors
+from src.utilities import list_of_tuples_to_tuple_of_tensors
 
 
 def concatenate(list_of_lists):

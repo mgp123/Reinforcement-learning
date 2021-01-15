@@ -6,22 +6,27 @@ from tqdm import tqdm
 from src.agent import Agent
 from src.agent_observer import ReplayBuffer, RewardObserver
 from src.learner import Learner
-from src.utilities import list_of_tuples_to_tuple_of_tensors, update_exponential_average
 from src.stochastic_policy import DeterministicPolicy
+from src.utilities import list_of_tuples_to_tuple_of_tensors, update_exponential_average
 
-
-class DDPG(Learner):
+# TODO modify so as being able to copy q_model without using its base class. Using base class can be problemaic with
+#  for example type(q_model) == Sequential. Sequential() is an empry model
+class TD3(Learner):
     def __init__(self,
                  environment, discount_factor,
                  a_model, a_optimizer,
                  q_model, q_optimizer):
 
-        super(DDPG, self).__init__(environment, discount_factor)
+        super(TD3, self).__init__(environment, discount_factor)
         self.a_model, self.a_optimizer = a_model, a_optimizer,
-        self.q_model, self.q_optimizer = q_model, q_optimizer
+        self.q_model_1, self.q_optimizer_1 = q_model, q_optimizer
+        # randomize second q_model weights so as to be 2 different networks
+        # this breaks any pretraining that q_model might have, so that should be considered when using algorithm
+        self.q_model_2, self.q_optimizer_2 = copy_model_and_optimizer(self.q_model_1, self.q_optimizer_1)
 
         self.a_model_target = copy.deepcopy(self.a_model)
-        self.q_model_target = copy.deepcopy(self.q_model)
+        self.q_model_1_target = copy.deepcopy(self.q_model_1)
+        self.q_model_2_target = copy.deepcopy(self.q_model_2)
 
     def gaussian_distribution(self, gaussian_noise_variance):
         action_space_dimensions = self.environment.action_space.shape[0]
@@ -35,7 +40,9 @@ class DDPG(Learner):
                      episodes=200,
                      experience_replay_samples=32,
                      gaussian_noise_variance=1,
-                     exponential_average_factor=0.01):
+                     exponential_average_factor=0.01,
+                     noise_bound=None
+                     ):
 
         pbar = tqdm(total=episodes)
 
@@ -63,7 +70,10 @@ class DDPG(Learner):
             if buffer.size() >= experience_replay_samples:
                 self.experience_replay(
                     buffer.sample_transitions(experience_replay_samples),
-                    exponential_average_factor)
+                    exponential_average_factor,
+                    noise_bound=noise_bound,
+                    noise_distribution=gaussian_noise
+                )
 
             # if episode ended, update progress
             if done:
@@ -73,27 +83,43 @@ class DDPG(Learner):
         pbar.close()
         return DeterministicPolicy(self.a_model), reward_observer.get_rewards()
 
-    def experience_replay(self, transitions, exponential_average_factor):
+    def experience_replay(self,
+                          transitions,
+                          exponential_average_factor,
+                          noise_distribution,
+                          noise_bound):
+
         state, action, reward, state_next, done = list_of_tuples_to_tuple_of_tensors(transitions)
         reward = torch.unsqueeze(reward, 1)
         done = torch.unsqueeze(done, 1)
 
-        # target for q_model
-        action_target = self.a_model_target(state_next)
-        y_q = reward + self.discount_factor * self.q_model_target(state_next, action_target) * (1 - done)
+        # action for target of q_model
+        noise = noise_distribution.sample()
+        if noise_bound is not None:
+            noise = torch.clamp(noise, min=-noise_bound, max=noise_bound)
+        action_target = self.a_model_target(state_next) + noise
+
+        q_target = torch.min(
+            self.q_model_1_target(state_next, action_target),
+            self.q_model_2_target(state_next, action_target))
+
+        y_q = reward + self.discount_factor * q_target * (1 - done)
         y_q = y_q.detach()
 
-        # q_model gradient step
-        loss = torch.nn.MSELoss()
-        loss = loss(self.q_model(state, action), y_q)
-        loss = loss.mean()
-        self.q_optimizer.zero_grad()
-        loss.backward()
-        self.q_optimizer.step()
+        # q_models gradient step
+        for q_model, q_optimizer in \
+                [(self.q_model_1, self.q_optimizer_1),
+                 (self.q_model_2, self.q_optimizer_2)]:
+            loss = torch.nn.MSELoss()
+            loss = loss(q_model(state, action), y_q)
+            loss = loss.mean()
+            q_optimizer.zero_grad()
+            loss.backward()
+            q_optimizer.step()
 
         # as q_model changed, we should update our estimate for max action of q_model
         action = self.a_model(state)
-        loss = - self.q_model(state, action)
+        loss = - self.q_model_1(state, action)
         loss = loss.mean()
         self.a_optimizer.zero_grad()
         # backward will also propagate gradient to q_model but, as we zero grad it in next iteration, it is not an issue
@@ -102,7 +128,15 @@ class DDPG(Learner):
 
         # updates target networks by adding to exponential average of previous weights:
         # w_target = w_model * epsilon + w_target * (1-epsilon)
-        update_exponential_average(self.q_model_target, self.q_model, exponential_average_factor)
+        update_exponential_average(self.q_model_1_target, self.q_model_1, exponential_average_factor)
+        update_exponential_average(self.q_model_2_target, self.q_model_2, exponential_average_factor)
         update_exponential_average(self.a_model_target, self.a_model, exponential_average_factor)
 
+
+def copy_model_and_optimizer(model, optimizer):
+    model2 = type(model)()
+    optimizer2 = type(optimizer)(model2.parameters(), lr=optimizer.defaults["lr"])
+    #optimizer2.load_state_dict(optimizer.state_dict())
+
+    return model, optimizer2
 

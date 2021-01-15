@@ -1,7 +1,7 @@
 import torch
 
 from src.agent_observer import TrajectoryObserver
-from src.pytorch_utilities import get_reward_to_go, list_of_tuples_to_tuple_of_tensors
+from src.utilities import get_reward_to_go, list_of_tuples_to_tuple_of_tensors
 
 # TODO IMPRACTICAL AS IF USED WOULD PROBABLY CAUSE OTHER PARTS RECALCULATE V UNNECESSARY
 

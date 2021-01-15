@@ -4,7 +4,7 @@ from tqdm import tqdm
 from src.agent import Agent
 from src.agent_observer import TrajectoryObserver, RewardObserver
 from src.learner import Learner
-from src.pytorch_utilities import list_of_tuples_to_tuple_of_tensors, get_reward_to_go
+from src.utilities import list_of_tuples_to_tuple_of_tensors, get_reward_to_go
 from src.stochastic_policy import StochasticPolicy
 
 
