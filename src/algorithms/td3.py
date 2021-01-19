@@ -1,4 +1,5 @@
 import copy
+import math
 
 import torch
 from tqdm import tqdm
@@ -7,7 +8,8 @@ from src.agent import Agent
 from src.agent_observer import ReplayBuffer, RewardObserver
 from src.learner import Learner
 from src.stochastic_policy import DeterministicPolicy
-from src.utilities import list_of_tuples_to_tuple_of_tensors, update_exponential_average
+from src.utilities import list_of_tuples_to_tuple_of_tensors, update_exponential_average, copy_model_and_optimizer
+
 
 # TODO modify so as being able to copy q_model without using its base class. Using base class can be problemaic with
 #  for example type(q_model) == Sequential. Sequential() is an empry model
@@ -41,7 +43,8 @@ class TD3(Learner):
                      experience_replay_samples=32,
                      gaussian_noise_variance=1,
                      exponential_average_factor=0.01,
-                     noise_bound=None
+                     noise_bound=None,
+                     buffer_size=math.inf
                      ):
 
         pbar = tqdm(total=episodes)
@@ -52,7 +55,7 @@ class TD3(Learner):
             self.a_model,
             additive_noise_distribution=gaussian_noise
         )
-        buffer = ReplayBuffer()
+        buffer = ReplayBuffer(buffer_size)
 
         reward_observer = RewardObserver()
         agent = Agent(self.environment, policy)
@@ -93,6 +96,27 @@ class TD3(Learner):
         reward = torch.unsqueeze(reward, 1)
         done = torch.unsqueeze(done, 1)
 
+        self.update_bellman_error(state, action, reward, done, state_next, noise_distribution, noise_bound)
+
+        # as q_model changed, we should update our estimate for max action of q_model
+        self.update_a_model(state)
+
+        # updates target networks by adding to exponential average of previous weights:
+        # w_target = w_model * epsilon + w_target * (1-epsilon)
+        update_exponential_average(self.q_model_1_target, self.q_model_1, exponential_average_factor)
+        update_exponential_average(self.q_model_2_target, self.q_model_2, exponential_average_factor)
+        update_exponential_average(self.a_model_target, self.a_model, exponential_average_factor)
+
+    def update_a_model(self, state):
+        action = self.a_model(state)
+        loss = - self.q_model_1(state, action)
+        loss = loss.mean()
+        self.a_optimizer.zero_grad()
+        # backward will also propagate gradient to q_model but, as we zero grad it in next iteration, it is not an issue
+        loss.backward()
+        self.a_optimizer.step()
+
+    def update_bellman_error(self, state, action, reward, done, state_next, noise_distribution, noise_bound):
         # action for target of q_model
         noise = noise_distribution.sample()
         if noise_bound is not None:
@@ -102,7 +126,6 @@ class TD3(Learner):
         q_target = torch.min(
             self.q_model_1_target(state_next, action_target),
             self.q_model_2_target(state_next, action_target))
-
         y_q = reward + self.discount_factor * q_target * (1 - done)
         y_q = y_q.detach()
 
@@ -117,26 +140,4 @@ class TD3(Learner):
             loss.backward()
             q_optimizer.step()
 
-        # as q_model changed, we should update our estimate for max action of q_model
-        action = self.a_model(state)
-        loss = - self.q_model_1(state, action)
-        loss = loss.mean()
-        self.a_optimizer.zero_grad()
-        # backward will also propagate gradient to q_model but, as we zero grad it in next iteration, it is not an issue
-        loss.backward()
-        self.a_optimizer.step()
-
-        # updates target networks by adding to exponential average of previous weights:
-        # w_target = w_model * epsilon + w_target * (1-epsilon)
-        update_exponential_average(self.q_model_1_target, self.q_model_1, exponential_average_factor)
-        update_exponential_average(self.q_model_2_target, self.q_model_2, exponential_average_factor)
-        update_exponential_average(self.a_model_target, self.a_model, exponential_average_factor)
-
-
-def copy_model_and_optimizer(model, optimizer):
-    model2 = type(model)()
-    optimizer2 = type(optimizer)(model2.parameters(), lr=optimizer.defaults["lr"])
-    #optimizer2.load_state_dict(optimizer.state_dict())
-
-    return model, optimizer2
 

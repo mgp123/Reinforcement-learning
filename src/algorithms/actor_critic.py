@@ -139,7 +139,7 @@ class ActorCriticBootstrappedVEstimate(Learner):
         agent.attach_observer(r_obs)
         transition_generator = agent.transition_generator()
 
-        # runs montecarlo policy gradient, tuning v_model and a_model
+        # runs montecarlo policy gradient, tuning v_model and a_distribution_model
         previous_rewards = self.initialize_v(v_initialization_episodes)
         r_obs.add(previous_rewards)
         print("heyey")

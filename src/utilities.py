@@ -44,3 +44,11 @@ def get_reward_to_go(trajectory: TrajectoryType, discount_factor: float) -> List
 def update_exponential_average(model_to_update, new_model, update_factor):
     for weights_new, weights_old in zip(new_model.parameters(), model_to_update.parameters()):
         weights_old.data.copy_(update_factor * weights_new.data + (1.0 - update_factor) * weights_old.data)
+
+
+def copy_model_and_optimizer(model, optimizer):
+    model2 = type(model)()
+    optimizer2 = type(optimizer)(model2.parameters(), lr=optimizer.defaults["lr"])
+    # optimizer2.load_state_dict(optimizer.state_dict())
+
+    return model, optimizer2

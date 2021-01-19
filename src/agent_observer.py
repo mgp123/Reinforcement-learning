@@ -127,6 +127,7 @@ class RewardObserver(AgentObserver):
         plt.xlabel('episode')
         plt.ylabel('total reward')
         plt.savefig("score.png")
+        plt.clf()
 
     def add(self, new_rewards):
         self.trajectory_rewards += new_rewards
