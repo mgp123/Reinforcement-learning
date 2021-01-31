@@ -7,7 +7,7 @@ from src.learner import *
 from src.policy import Policy
 
 
-class QIteration(Learner):
+class DQN(Learner):
     def __init__(self, environment, q_model: FunctionApproximatorType, optimizer,
                  exploration_policy: Policy, discount_factor=0.95):
         """
@@ -22,7 +22,7 @@ class QIteration(Learner):
             Should support the () operation. This is though with pytorch in mind.
         :param exploration_policy : Policy to be used by agent to collect data for q iteration.
         """
-        super(QIteration, self).__init__(environment, discount_factor=discount_factor)
+        super(DQN, self).__init__(environment, discount_factor=discount_factor)
         self.q_model = q_model
 
         self.hyperparameters = {}

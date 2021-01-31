@@ -9,7 +9,7 @@ from src.agent import Agent
 from src.epsilon_greedy import DecayingEpsilonGreedyQPolicy, GreedyQPolicy
 from src.algorithms.policy_gradient import PolicyGradient
 from src.algorithms.ppo import PPO
-from src.algorithms.q_iteration import QIteration
+from src.algorithms.dqn import DQN
 
 
 def cartpoloe():
@@ -27,7 +27,7 @@ def cartpoloe():
 
         optimizer = torch.optim.Adam(q_model.parameters(), lr=0.001)
 
-        learner = QIteration(
+        learner = DQN(
             environment=environment,
             q_model=q_model, optimizer=optimizer,
             exploration_policy=

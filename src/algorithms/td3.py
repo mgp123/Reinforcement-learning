@@ -23,7 +23,7 @@ class TD3(Learner):
         self.a_model, self.a_optimizer = a_model, a_optimizer,
         self.q_model_1, self.q_optimizer_1 = q_model, q_optimizer
         # randomize second q_model weights so as to be 2 different networks
-        # this breaks any pretraining that q_model might have, so that should be considered when using algorithm
+        # this breaks any pretraining that q_model might have, so that should be considered when using this algorithm
         self.q_model_2, self.q_optimizer_2 = copy_model_and_optimizer(self.q_model_1, self.q_optimizer_1)
 
         self.a_model_target = copy.deepcopy(self.a_model)
