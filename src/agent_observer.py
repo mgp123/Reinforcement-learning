@@ -1,6 +1,8 @@
 import math
 from random import randint, shuffle, sample
 
+import numpy as np
+
 from src.utilities import get_reward_to_go
 from src.type_definitions import *
 import matplotlib.pyplot as plt
@@ -127,6 +129,20 @@ class RewardObserver(AgentObserver):
         plt.xlabel('episode')
         plt.ylabel('total reward')
         plt.savefig("score.png")
+        plt.clf()
+
+    def plot_moving_average(self, window):
+        averages = np.convolve(
+            self.trajectory_rewards,
+            window * [1.0 / window]
+        )[window - 1: self.size()]
+
+        x = np.arange(start=window-1, stop=self.size())
+
+        plt.plot(x, averages)
+        plt.xlabel('episode')
+        plt.ylabel('total reward')
+        plt.savefig("score_average_" + str(window) + ".png")
         plt.clf()
 
     def add(self, new_rewards):

@@ -50,12 +50,15 @@ class A_stothastic_network(nn.Module):
     def __init__(self):
         super(A_stothastic_network, self).__init__()
         self.block = nn.Sequential(
-            nn.Linear(3, 64),
+            nn.Linear(3, 24),
             nn.ReLU()
         )
-        self.mean_block = nn.Linear(64, 1)
+        self.mean_block = nn.Sequential(
+            nn.Linear(24, 1, bias=False),
+            nn.Tanh())
+
         self.variance_block = nn.Sequential(
-            nn.Linear(64, 1),
+            nn.Linear(24, 1),
             nn.Sigmoid()
         )
 
@@ -63,7 +66,7 @@ class A_stothastic_network(nn.Module):
         x = self.block(state)
 
         mean = self.mean_block(x)
-        variance = self.variance_block(x)
+        variance = self.variance_block(x)/8
 
         y = torch.distributions.Normal(mean, variance)
         return y
@@ -73,19 +76,19 @@ def using_sac(environment):
     q_model = Q_network()
     a_model = A_stothastic_network()
 
-    lr = 0.03
+    lr = 0.01
     a_opt = torch.optim.Adam(a_model.parameters(), lr=lr)
     q_opt = torch.optim.Adam(q_model.parameters(), lr=lr)
-    v_opt = torch.optim.Adam(v_model.parameters(), lr=lr)
 
-    learner = SAC(environment, 0.99, a_model, a_opt, q_model, q_opt, v_model, v_opt)
+    learner = SAC(environment, 0.99, a_model, a_opt, q_model, q_opt)
 
     policy, rew = learner.learn_policy(
-        episodes=400,
-        experience_replay_samples=128,
+        episodes=500,
+        experience_replay_samples=32,
         exponential_average_factor=0.005,
-        entropy_coefficient=0.002,
-        buffer_size=100000
+        entropy_coefficient=0,
+        buffer_size=100000,
+        updates_per_replay=1
     )
 
     return policy, rew
@@ -129,8 +132,8 @@ if __name__ == '__main__':
     plt.plot(rew)
     plt.xlabel('episode')
     plt.ylabel('total reward')
-    plt.savefig("score.png")
+    plt.savefig("score_sac.png")
 
     agent = Agent(environment, policy)
-    while input("waiting") == "c":
+    while input("waiting ") == "c":
         agent.perform_episode(render=True)
